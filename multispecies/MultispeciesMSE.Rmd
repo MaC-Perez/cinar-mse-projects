@@ -2,11 +2,14 @@
 title: "MultispeciesMSE"
 author: "Sarah Gaichas"
 date: "1/11/2022"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(mskeyrun)
 ```
 
 Steps for multispecies MSE:
@@ -22,10 +25,10 @@ Simulated output of ecosystem model. Options include Norwegian-Barents Atlantis 
 Which species to use in the model? Probably the ones that interact the most. Here we use simulated survey diet composition to find the highest average diet proportions between the 11 species in the simulated dataset. We are assuming we only want to focus on managed fish species, rather than interactions with lower trophic levels or protected species. 
 
 ```{r}
-# install data package
-remotes::install_github("NOAA-EDAB/ms-keyrun")
-
-library(mskeyrun)
+# install data package if needed
+#remotes::install_github("NOAA-EDAB/ms-keyrun")
+# the libraries are all in the first code chunk above now
+#library(mskeyrun)
 
 # which species pairs interact the most? 
 # a too-quick analysis finding the mean proportion in diet from the diet dataset:
@@ -70,7 +73,7 @@ index.df %>%
   
 ```
 
-Do we want to use just one of the surveys if we use this dataset?
+Do we want to use just one of the surveys if we use this dataset? Maybe fall because Blue whiting migrate from the system in the spring (though maybe that is when Redfish eat them all? might be worth a look)
 
 ### Rpath data
 ```{r}
@@ -182,33 +185,70 @@ assess <- function(catch,index,calc.vcov=FALSE,pars.init) {
 
 ### Single species models?
 
-Try fitting to each species separately first, adjusting Gavin's code:
-
-First define initial parameter vector for: log(K), log(r), log(sigma)  
-```{r}
-#ini.parms <- c(log(1200), log(0.1), log(0.3))
-
-# use max survey B as the initial value for K
-
-
-```
+Try fitting to each species separately first, adjusting Gavin's code (test with atlantis output till we get rpath):
 
 Make separate data objects for each species
 ```{r}
 harvest.redfish <- harvest.df %>%
   filter(Name=="Redfish",
          variable=="catch") %>%
-  select(value) 
+  select(value) %>%
+  unlist() %>%
+  unname()
+
+index.redfish <- index.df %>%
+  filter(Name=="Redfish",
+         variable=="biomass", 
+         survey=="BTS_fall_allbox_effic1") %>%
+  select(value) %>%
+  unlist() %>%
+  unname()
+
+harvest.bluewhiting <- harvest.df %>%
+  filter(Name=="Blue_whiting",
+         variable=="catch") %>%
+  select(value) %>%
+  unlist() %>%
+  unname()
+
+index.bluewhiting <- index.df %>%
+  filter(Name=="Blue_whiting",
+         variable=="biomass", 
+         survey=="BTS_fall_allbox_effic1") %>%
+  select(value) %>%
+  unlist() %>%
+  unname()
   
 ```
 
 
-Fit the logistic model to data:  
+First define initial parameter vector for redfish: log(K), log(r), log(sigma)  
 ```{r}
-redfish <- assess(harvest,index,calc.vcov=TRUE,ini.parms)
+#ini.parms <- c(log(1200), log(0.1), log(0.3))
+
+# use max survey B as the initial value for K
+maxsvB.red <- max(index.redfish)
+ini.parms.red <- c(log(maxsvB.red), log(0.1), log(0.3))
+
+maxsvB.blue <- max(index.bluewhiting)
+ini.parms.blue <- c(log(maxsvB.blue), log(0.5), log(0.3))
+
+
+
+```
+
+
+Fit the logistic model to data (redfish):  
+```{r}
+redfish <- assess(harvest.redfish,index.redfish,calc.vcov=TRUE,ini.parms.red)
 redfish
 ```
 
+Fit the logistic model to data (bluewhiting):  
+```{r}
+bluewhiting <- assess(harvest.bluewhiting,index.bluewhiting,calc.vcov=TRUE,ini.parms.blue)
+bluewhiting
+```
 
 #  Design HCRs
 
