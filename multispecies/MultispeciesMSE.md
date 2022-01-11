@@ -11,7 +11,7 @@ Steps for multispecies MSE:
 
 Simulated output of ecosystem model. Options include Norwegian-Barents
 Atlantis generated dataset in
-`[mskeyrun](https://noaa-edab.github.io/ms-keyrun/)` R package and
+[`mskeyrun`](https://noaa-edab.github.io/ms-keyrun/) R package and
 generating data from the [Georges Bank Rpath
 model](https://github.com/NOAA-EDAB/GBRpath).
 
@@ -323,6 +323,33 @@ bluewhiting
     ## [1,]  3.646685e-05 -6.302346e-05 -0.0000879590
     ## [2,] -6.302346e-05  1.098883e-04  0.0001511557
     ## [3,] -8.795900e-05  1.511557e-04  0.0063847211
+
+SS model fit plots: fitted line in gray
+
+``` r
+fit.red <- data.frame(value= redfish$biomass,
+                      year=c(40:120),
+                      Name="Redfish")
+
+fit.blue <- data.frame(value= bluewhiting$biomass,
+                       year=c(40:120),
+                       Name="Blue_whiting")
+
+fits <- bind_rows(fit.red, fit.blue)
+
+
+index.df %>%
+  filter(variable=="biomass") %>%
+  ggplot() +
+  geom_point(aes(x=year, y=value, colour=survey)) +
+  geom_line(data=(harvest.df %>% filter(variable=="catch")), 
+            aes(x=year, y=value)) +
+  geom_line(data=fits, aes(x=year, y=value), lwd=1.3, col=gray(0.5)) +
+  theme_bw() +
+  facet_wrap(~Name)
+```
+
+![](MultispeciesMSE_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 # Design HCRs
 
