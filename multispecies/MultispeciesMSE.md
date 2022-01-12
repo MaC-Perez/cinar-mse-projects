@@ -550,7 +550,7 @@ GB.data %>%
   geom_line(aes(x=Year, y=TotCatch)) +
   geom_line(data=fits, aes(x=Year, y=value), lwd=1.3, col=gray(0.5)) +
   theme_bw() +
-  facet_wrap(~Species)
+  facet_wrap(~Species, scales = "free")
 ```
 
 ![](MultispeciesMSE_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
