@@ -280,9 +280,45 @@ index.bluewhiting <- index.df %>%
   select(value) %>%
   unlist() %>%
   unname()
+
+harvest.GBcod <- GB.data %>%
+  filter(Species=="Cod") %>%
+  select(TotCatch) %>%
+  unlist() %>%
+  unname()
+
+index.GBcod <- GB.data %>%
+  filter(Species=="Cod") %>%
+  select(ObsBio) %>%
+  unlist() %>%
+  unname()
+
+harvest.GBherring <- GB.data %>%
+  filter(Species=="AtlHerring") %>%
+  select(TotCatch) %>%
+  unlist() %>%
+  unname()
+
+index.GBherring <- GB.data %>%
+  filter(Species=="AtlHerring") %>%
+  select(ObsBio) %>%
+  unlist() %>%
+  unname()
+
+harvest.GBhaddock <- GB.data %>%
+  filter(Species=="Haddock") %>%
+  select(TotCatch) %>%
+  unlist() %>%
+  unname()
+
+index.GBhaddock <- GB.data %>%
+  filter(Species=="Haddock") %>%
+  select(ObsBio) %>%
+  unlist() %>%
+  unname()  
 ```
 
-First define initial parameter vector for redfish: log(K), log(r),
+First define initial parameter vector for each species: log(K), log(r),
 log(sigma)
 
 ``` r
@@ -294,6 +330,15 @@ ini.parms.red <- c(log(maxsvB.red), log(0.1), log(0.3))
 
 maxsvB.blue <- max(index.bluewhiting)
 ini.parms.blue <- c(log(maxsvB.blue), log(0.5), log(0.3))
+
+maxsvB.GBcod <- max(index.GBcod)
+ini.parms.GBcod <- c(log(maxsvB.GBcod), log(0.2), log(0.3))
+
+maxsvB.GBherring <- max(index.GBherring)
+ini.parms.GBherring <- c(log(maxsvB.GBherring), log(0.3), log(0.3))
+
+maxsvB.GBhaddock <- max(index.GBhaddock)
+ini.parms.GBhaddock <- c(log(maxsvB.GBhaddock), log(0.3), log(0.3))
 ```
 
 Fit the logistic model to data (redfish):
@@ -388,6 +433,127 @@ index.df %>%
 ```
 
 ![](MultispeciesMSE_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+Fit the logistic model to data (GBcod):
+
+``` r
+GBcod <- assess(harvest.GBcod,index.GBcod,calc.vcov=TRUE,ini.parms.GBcod)
+GBcod
+```
+
+    ## $pars
+    ## [1] -0.6721430 -0.3334961 -1.1246121
+    ## 
+    ## $biomass
+    ##  [1] 0.5106132 0.5088062 0.5082572 0.5080804 0.5080199 0.5079981 0.5079904
+    ##  [8] 0.5079882 0.5079884 0.5079895 0.5079909 0.5062431 0.5057387 0.5055937
+    ## [15] 0.5055529 0.5055418 0.4708043 0.4603266 0.4568661 0.4558037 0.4555342
+    ## [22] 0.4239592 0.4115476 0.4062226 0.4038501 0.4027125 0.3533783 0.3293266
+    ## [29] 0.3152434 0.3057674 0.2985374 0.3601183 0.4053014 0.4320874 0.4453191
+    ## [36] 0.4510856 0.4726863 0.4813297 0.4843817 0.4854001 0.4857482
+    ## 
+    ## $convergence
+    ## [1] 0
+    ## 
+    ## $nll
+    ## [1] 12.06642
+    ## 
+    ## $vcov
+    ##               [,1]          [,2]         [,3]
+    ## [1,]  4.063017e-03 -1.111582e-02 8.456570e-07
+    ## [2,] -1.111582e-02  4.921633e-02 7.707793e-07
+    ## [3,]  8.456570e-07  7.707793e-07 1.219568e-02
+
+Fit the logistic model to data (GBherring):
+
+``` r
+GBherring <- assess(harvest.GBherring,index.GBherring,calc.vcov=TRUE,ini.parms.GBherring)
+GBherring
+```
+
+    ## $pars
+    ## [1]  2.1532977 -0.9129969 -1.2057643
+    ## 
+    ## $biomass
+    ##  [1] 8.613216 8.145220 7.855381 7.665838 7.537665 7.449056 7.386855 7.342714
+    ##  [9] 7.311140 7.288423 7.272005 7.260065 7.251253 7.244699 7.239820 7.236196
+    ## [17] 7.233165 7.229828 7.226290 7.222960 7.220118 7.217480 7.214283 7.210768
+    ## [25] 7.207448 7.204651 7.201851 7.197853 7.193099 7.188468 7.184527 7.182554
+    ## [33] 7.184497 7.189347 7.195304 7.201078 7.206201 7.210820 7.214800 7.217981
+    ## [41] 7.220333
+    ## 
+    ## $convergence
+    ## [1] 0
+    ## 
+    ## $nll
+    ## [1] 8.74342
+    ## 
+    ## $vcov
+    ##               [,1]          [,2]          [,3]
+    ## [1,]  1.027706e-02 -5.259147e-02  1.479582e-06
+    ## [2,] -5.259147e-02  3.143849e-01 -4.496047e-06
+    ## [3,]  1.479582e-06 -4.496047e-06  1.219316e-02
+
+Fit the logistic model to data (GBhaddock):
+
+``` r
+GBhaddock <- assess(harvest.GBhaddock,index.GBhaddock,calc.vcov=TRUE,ini.parms.GBhaddock)
+GBhaddock
+```
+
+    ## $pars
+    ## [1]  1.778878 -0.370606 -1.325114
+    ## 
+    ## $biomass
+    ##  [1] 5.923210 5.908908 5.904409 5.902975 5.902515 5.902369 5.902327 5.902319
+    ##  [9] 5.902324 5.902333 5.902343 5.902189 5.902145 5.902133 5.902130 5.902130
+    ## [17] 5.812982 5.784857 5.775775 5.772865 5.771927 5.684644 5.655044 5.644729
+    ## [25] 5.641017 5.639505 5.470069 5.408316 5.384744 5.375483 5.371466 5.618152
+    ## [33] 5.716512 5.751264 5.762671 5.766181 5.821021 5.839381 5.845343 5.847271
+    ## [41] 5.847924
+    ## 
+    ## $convergence
+    ## [1] 0
+    ## 
+    ## $nll
+    ## [1] 3.845693
+    ## 
+    ## $vcov
+    ##               [,1]          [,2]          [,3]
+    ## [1,]  2.846993e-03 -0.0424315538 -7.616471e-07
+    ## [2,] -4.243155e-02  1.4711829229  1.546270e-05
+    ## [3,] -7.616471e-07  0.0000154627  1.219577e-02
+
+GB SS model fit plots: fitted line in gray
+
+``` r
+#model may not be using the last data year? misaligned. a hack here to fix
+
+fit.cod <- data.frame(value= GBcod$biomass,
+                      Year=c(1983:2023),
+                      Species="Cod")
+
+fit.herring <- data.frame(value= GBherring$biomass,
+                       Year=c(1983:2023),
+                       Species="AtlHerring")
+
+fit.haddock <- data.frame(value= GBhaddock$biomass,
+                       Year=c(1983:2023),
+                       Species="Haddock")
+
+fits <- bind_rows(fit.cod, fit.herring, fit.haddock)
+
+
+GB.data %>%
+  ggplot()+
+  geom_point(aes(x=Year, y=ObsBio)) +
+  geom_line(aes(x=Year, y=TotCatch)) +
+  geom_line(data=fits, aes(x=Year, y=value), lwd=1.3, col=gray(0.5)) +
+  theme_bw() +
+  facet_wrap(~Species)
+```
+
+![](MultispeciesMSE_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 # Design HCRs
 
