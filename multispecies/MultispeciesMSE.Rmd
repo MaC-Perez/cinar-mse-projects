@@ -76,7 +76,27 @@ index.df %>%
 Do we want to use just one of the surveys if we use this dataset? Maybe fall because Blue whiting migrate from the system in the spring (though maybe that is when Redfish eat them all? might be worth a look)
 
 ### Rpath data
+
+Full dataset now in the `data` folder in this repo.
 ```{r}
+
+#load Rpath Georges Bank model outputs, object is called GB.data
+load(here("multispecies/data/GBdata.rda"))
+
+#units are tons/square kilometer for biomass and catch
+str(GB.data)
+
+#there are three spexxies
+unique(GB.data$Species)
+
+data.years <- unique(GB.data$Year)
+
+GB.data %>%
+  ggplot()+
+  geom_point(aes(x=Year, y=ObsBio)) +
+  geom_line(aes(x=Year, y=TotCatch)) +
+  theme_bw() +
+  facet_wrap(~Species)
 
 ```
 

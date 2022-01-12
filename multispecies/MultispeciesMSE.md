@@ -97,6 +97,44 @@ maybe that is when Redfish eat them all? might be worth a look)
 
 ### Rpath data
 
+Full dataset now in the `data` folder in this repo.
+
+``` r
+#load Rpath Georges Bank model outputs, object is called GB.data
+load(here("multispecies/data/GBdata.rda"))
+
+#units are tons/square kilometer for biomass and catch
+str(GB.data)
+```
+
+    ## Classes 'data.table' and 'data.frame':   120 obs. of  5 variables:
+    ##  $ Year    : int  1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 ...
+    ##  $ Species : chr  "Cod" "Cod" "Cod" "Cod" ...
+    ##  $ ObsBio  : num  0.34 0.47 0.649 0.374 0.866 ...
+    ##  $ TotCatch: num  0.00181 0.00184 0.00186 0.00187 0.00187 ...
+    ##  $ Fmort   : num  0.00532 0.00392 0.00286 0.00499 0.00216 ...
+    ##  - attr(*, ".internal.selfref")=<externalptr>
+
+``` r
+#there are three spexxies
+unique(GB.data$Species)
+```
+
+    ## [1] "Cod"        "Haddock"    "AtlHerring"
+
+``` r
+data.years <- unique(GB.data$Year)
+
+GB.data %>%
+  ggplot()+
+  geom_point(aes(x=Year, y=ObsBio)) +
+  geom_line(aes(x=Year, y=TotCatch)) +
+  theme_bw() +
+  facet_wrap(~Species)
+```
+
+![](MultispeciesMSE_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
 ## Multispecies operating model
 
 Production model or biomass-dynamics model form with species interaction
