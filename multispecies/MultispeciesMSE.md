@@ -555,6 +555,86 @@ GB.data %>%
 
 ![](MultispeciesMSE_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
+### Try multispecies Schaeffer model
+
+So I like this idea, but fitting it will not be trivial.
+
+There are options such as those described here
+<https://rpubs.com/Jeet1994/Prey-predator-model>
+
+This is a start but I don’t think we can use the nll function for
+solving, may have to go with something like stan as above.
+
+Now working with vectors and matrices
+
+``` r
+msschaefer <- function(B,C,K,r,alpha) {
+  #function msschaefer takes a vector of current biomass, vector of catch
+  #and model parameters to compute next year's biomass vector for a multispecies system
+  #alpha is an nsp*nsp matrix of interaction parameters
+  #nsp <- length(B)
+  res <- B + B * r * (1 - B/K) - C - alpha%*%B*B
+}
+```
+
+Input data (would be closer to GB.data if I try the Prey-predator model
+approach linked above)
+
+``` r
+index.GB3 <- GB.data %>%
+  select(Year, Species, ObsBio) %>%
+  pivot_wider(names_from = Species, values_from = ObsBio) %>%
+  select(-Year) %>%
+  unname()
+
+harvest.GB3 <- GB.data %>%
+  select(Year, Species, TotCatch) %>%
+  pivot_wider(names_from = Species, values_from = TotCatch)%>%
+  select(-Year) %>%
+  unname()
+```
+
+Modify other functions for vectors and matrices
+
+``` r
+msdynamics <- function(pars,C,yrs) {
+  # dynamics takes the model parameters, the time series of catch, 
+  # & the yrs to do the projection over
+  
+  # first extract the parameters from the pars matrix (we estimate K in log-space)
+  K <- exp(pars[1,])
+  r <- exp(pars[2,])
+  alpha
+  
+  # number of species
+  nsp <- dim(C)[2]
+  
+  # find the total number of years
+  nyr <- dim(C)[1] + 1
+  
+  # if the vector of years was not supplied we create 
+  # a default to stop the program crashing
+  if (missing(yrs)) yrs <- 1:nyr
+  
+  #set up the biomass vector
+  B <- numeric(nyr)
+  
+  #intialize biomass at carrying capacity
+  B[1] <- K
+  # project the model forward using the schaefer model
+  for (y in 2:nyr) {
+    B[y] <- schaefer(B[y-1],C[y-1],K,r)
+  }
+  
+  #return the time series of biomass
+  return(B[yrs])
+  
+  #end function dynamics
+}  
+```
+
+### For a 3 day project we are probably best off not trying to condition a multispecies operating model to data, or to have a multispecies assessment model
+
 # Design HCRs
 
 Separate single species HCRs (start with Gavin’s specified as default)
