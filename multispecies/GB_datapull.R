@@ -1,5 +1,5 @@
 #Generate data for MSE project
-library(data.table); library(here); library(Rpath)
+library(data.table); library(here); library(Rpath); library(ggplot2)
 
 #Load GB params
 load(here('multispecies', 'data-raw', 'GB_balanced_params.RData'))
@@ -14,9 +14,14 @@ GB.scene <- adjust.fishing(GB.scene, parameter = 'ForcedEffort', group = 'OtterT
                                                             rep(5, 5), rep(10, 5),
                                                             rep(2.5, 5)))
 GB.scene <- adjust.fishing(GB.scene, parameter = 'ForcedEffort', group = 'Gillnet',
-                           sim.year = 1983:2012, value = c(rep(0, 10), rep(1.5, 5),
-                                                           rep(2, 5), rep(4, 5),
+                           sim.year = 1983:2012, value = c(rep(0, 15), rep(2.5, 5),
+                                                           rep(5, 5), rep(10, 5),
                                                            rep(2.5, 5)))
+GB.scene <- adjust.fishing(GB.scene, parameter = 'ForcedEffort', group = 'Midwater',
+                           sim.year = 1983:2012, value = c(rep(0, 15), rep(2.5, 5),
+                                                           rep(5, 5), rep(10, 5),
+                                                           rep(2.5, 5)))
+
 GB.run <- rsim.run(GB.scene, years = 1983:2022)
 
 #Plot results
@@ -54,9 +59,9 @@ GenData <- function(Rsim.output, group, sim.year, Sigma = 0.3, bias = 1, freq = 
   return(out)
 } 
 
-cod <- GenData(GB.run, 'Cod', 1983:2022)  
-haddock <- GenData(GB.run, 'Haddock', 1983:2022)
-atlherring <- GenData(GB.run, 'AtlHerring', 1983:2022)
+cod <- GenData(GB.run, 'Cod', 1983:2022, Sigma = 0.1)  
+haddock <- GenData(GB.run, 'Haddock', 1983:2022, Sigma = 0.1)
+atlherring <- GenData(GB.run, 'AtlHerring', 1983:2022, Sigma = 0.1)
 
 #Merge into 1 file
 GB.data <- data.table(Year = 1983:2022,
