@@ -130,7 +130,7 @@ GB.data %>%
   geom_point(aes(x=Year, y=ObsBio)) +
   geom_line(aes(x=Year, y=TotCatch)) +
   theme_bw() +
-  facet_wrap(~Species)
+  facet_wrap(~Species, scales = "free")
 ```
 
 ![](MultispeciesMSE_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
