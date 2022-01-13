@@ -1,6 +1,6 @@
 ---
 title: "Haddock SS Assessment"
-author: "AMiller"
+author: "CRoman APainten"
 date: "January 2022"
 output: pdf_document
 ---
@@ -35,10 +35,10 @@ Our first task is to condition our operating model, that we will then use to per
 #####Input data and associated years
 ```{r}
 load(here("multispecies/data/GBdata.rda"))
-AtlHerring <- subset(GB.data, Species=="AtlHerring")
-data.years <- AtlHerring$Year
-harvest <- AtlHerring$TotCatch
-index <- AtlHerring$ObsBio
+Haddock <- subset(GB.data, Species=="Haddock")
+data.years <- Haddock$Year
+harvest <- Haddock$TotCatch
+index <- Haddock$ObsBio
 ```
  
 
@@ -148,26 +148,26 @@ First define initial parameter vector for: log(K), log(r), log(sigma)
 # maxsvB.GBcod <- max(index.GBcod)
 # ini.parms.GBcod <- c(log(maxsvB.GBcod), log(0.2), log(0.3))
 
-maxsvB.GBherring <- max(index)
-ini.parms.GBherring <- c(log(maxsvB.GBherring), log(0.3), log(0.3))
+# maxsvB.GBherring <- max(index)
+# ini.parms.GBherring <- c(log(maxsvB.GBherring), log(0.3), log(0.3))
 
-#maxsvB.GBhaddock <- max(index.GBhaddock)
-#ini.parms.GBhaddock <- c(log(maxsvB.GBhaddock), log(0.3), log(0.3))
+maxsvB.GBhaddock <- max(index.GBhaddock)
+ini.parms.GBhaddock <- c(log(maxsvB.GBhaddock), log(0.3), log(0.3))
 
 
 ```
 
 Fit the logistic model to data:  
 ```{r}
-GBHerring <- assess(harvest,index,calc.vcov=TRUE,ini.parms.GBherring)
-GBHerring
+GBHaddock <- assess(harvest,index,calc.vcov=TRUE,ini.parms.GBhaddock)
+GBHaddock
 ```
 
 Extract the maximum likelihood and parameter estimates  
 ```{r}
-biomass.mle <- GBHerring$biomass
+biomass.mle <- GBHaddock$biomass
 print(biomass.mle)
-pars.mle <- GBHerring$pars
+pars.mle <- GBHaddock$pars
 print(exp(pars.mle))
 ```
 
@@ -188,8 +188,8 @@ colnames(pars.iter) <- c("log_K","log_r","log_sigma")
 
 # generate the sets of parameter values
 for (i in 1:niter) {
-  pars.iter[i,] <- mvtnorm::rmvnorm(1, mean = GBHerring$pars,
-                       sigma = GBHerring$vcov)
+  pars.iter[i,] <- mvtnorm::rmvnorm(1, mean = GBHaddock$pars,
+                       sigma = GBHaddock$vcov)
 }
 
 # Now generate replicate model outputs
@@ -444,7 +444,7 @@ projection.plot(project.fixed)
 ```
 
 ```{r}
-saveRDS(project.fixed, file = here("multispecies/data/SS_Herring.rds"))
+saveRDS(project.fixed, file = here("multispecies/data/SS_Haddock.rds"))
 ```
 
 
@@ -452,7 +452,7 @@ Run HCR scenario 2
 ```{r}
 control.pars.psps <- list()
 
-control.pars.psps$Species <- SS.Fmsy$Species["AtlHerring"]
+control.pars.psps$Species <- SS.Fmsy$Species["Haddock"]
 control.pars.psps$H1 <- 0.75*SS.Fmsy$Fmsy #this matches the max F in the other scenario
 control.pars.psps$H2 <- 0.5*SS.Fmsy$Fmsy 
 control.pars.psps$H3 <- 0.1*SS.Fmsy$Fmsy 
@@ -487,6 +487,74 @@ control.pars.psps$B4 <- 0.25*SS.BMSY$BMSY
   }
 ```
 
+```{r, include=FALSE}
+evaluate.psps <- function(pars.iter, biomass.iter,
+                     control.pars.psps, data.years, proj.years,
+                     iterations, ...) {
+  # function arguments:
+  # pars.iter & biomass.iter, the parameters & historical biomass trajectories of the operating model
+  # control.pars, the specifications of the harvest control rule
+  
+  # set up some indexing values
+  iyr <- length(data.years)+1
+  pyr <- length(proj.years)
+  yrs <- c(data.years, proj.years, max(proj.years)+1)
+  
+  # set up a data frame to store the results
+  res <- data.frame()
+  
+  # loop over the iterations of the MSE, each iteration conducts a 20 year projection with annual generation of biomass    
+  # observations and appliations of the control rule.
+  for(i in 1:iterations) {
+    
+    #extract the parameters for this iteration
+    K.i <- exp(pars.iter[i,1])
+    r.i <- exp(pars.iter[i,2])
+    sig.i <- exp(pars.iter[i,3])
+    
+    #set up vectors for time series of interest.
+    biomass.i <- c(subset(biomass.iter, iter==i)$biomass, numeric(pyr))
+    index.i <- c(index,numeric(pyr))
+    catch.i <- c(harvest, numeric(pyr))
+    TAC.i <- numeric(pyr)
+    
+    # loop over the projection period.
+    for (y in iyr:(iyr+pyr-1)) {
+      #generate the data for the most recent year
+      index.i[y] <- observe(biomass.i[y] , sig.i)
+      #calculate the TAC based on the harvest control rule
+      # note that the control rule ONLY sees the index data, not the operating model biomass.
+      TAC.i [y]  <- control(index.i[y], control.pars) * index.i[y]
+      #find the realized catch after implementation error
+      catch.i[y] <- implement(TAC.i[y], ...)
+      
+      # update the true biomass of the operating model based on the output of the HCR
+      biomass.i[y+1] <- schaefer(biomass.i[y],catch.i[y],K.i,r.i)
+      
+      #end projection year loop for iteration i  
+    }
+    
+    #store the results for this iteration
+    res <- rbind(res, data.frame(year = yrs[-length(yrs)],
+                                 value = index.i, type = "index", iter = i),
+                 data.frame(year = yrs[-length(yrs)],
+                            value = catch.i, type = "catch", iter=i),
+                 data.frame(year = yrs, value = biomass.i,
+                            type= "biomass", iter=i)) 
+    #end loop over iterations
+  }
+  return(res)
+  #end function evaluate()
+}
+```
+
+Project with PSPS HCR of estimated biomass for all iterations & 20 yrs  
 ```{r}
-evaluate()
+hadd_psps <- evaluate.psps(pars.iter, biomass.iter, control.pars.psps, data.years, proj.years, niter)
+tail(hadd_psps)
+```
+
+
+```{r}
+projection.plot(hadd_psps)
 ```
