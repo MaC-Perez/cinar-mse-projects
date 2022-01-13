@@ -416,7 +416,8 @@ control.pars$Htarg1 <- 0.1*SS.Fmsy$Fmsy
 control.pars$Htarg2 <- 0.5*SS.Fmsy$Fmsy 
 control.pars$Htarg3 <- 0.75*SS.Fmsy$Fmsy 
 
-
+control.pars$Bmsy <- SS.BMSY$Species
+control.pars$B1 <- 0.1*SS.BMSY$BMSY
 
 #Plateau-slope-plateau-slop HCR  
   control <- function(estimated.biomass, control.pars, Species) {
