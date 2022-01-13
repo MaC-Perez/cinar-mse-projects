@@ -387,9 +387,8 @@ SS.BMSY <- pars %>%
   select(Species, BMSY)
 
 SS.Fmsy <- pars %>%
-  select(-value) %>%
-  pivot_wider(names_from = "Par", values_from = "exppar") %>%
-  mutate(Fmsy=(logr*logK)/4) %>% #so these par names are wrong because the values are exp(par)
+  filter(Par == 'logr') %>%
+  mutate(Fmsy= exppar/2) %>% 
   select(Species, Fmsy)
 
 ```
@@ -412,33 +411,36 @@ This will be somewhat complicated due to the multiple fleets/species interaction
 control.pars <- list()
 
 control.pars$Species <- SS.Fmsy$Species
-control.pars$Htarg1 <- 0.1*SS.Fmsy$Fmsy 
-control.pars$Htarg2 <- 0.5*SS.Fmsy$Fmsy 
-control.pars$Htarg3 <- 0.75*SS.Fmsy$Fmsy 
+control.pars$H1 <- 0.75*SS.Fmsy$Fmsy #this matches the max F in the other scenario
+control.pars$H2 <- 0.5*SS.Fmsy$Fmsy 
+control.pars$H3 <- 0.1*SS.Fmsy$Fmsy 
 
-control.pars$Bmsy <- SS.BMSY$Species
-control.pars$B1 <- 0.1*SS.BMSY$BMSY
+control.pars$B1 <- 2.0*SS.BMSY$BMSY
+control.pars$B2 <- 1.0*SS.BMSY$BMSY
+control.pars$B3 <- 0.5*SS.BMSY$BMSY
+control.pars$B4 <- 0.25*SS.BMSY$BMSY
+
 
 #Plateau-slope-plateau-slop HCR  
   control <- function(estimated.biomass, control.pars, Species) {
     
-    control.pars$Htarg[control.pars$Species==Species]
-    
-    H1 <- control.pars$H1
-    H2 <- control.pars$H2
-    H3 <- control.pars$H3
-    Bmax <- control.pars$Bmax
-    B3 <- control.pars$B3
-    B2 <- control.pars$B2
-    B1 <- control.pars$B1
+    H1 <- control.pars$H1[control.pars$Species==Species]
+    H2 <- control.pars$H2[control.pars$Species==Species]
+    H3 <- control.pars$H3[control.pars$Species==Species]
+   
+    B4 <- control.pars$B4[control.pars$Species==Species]
+    B3 <- control.pars$B3[control.pars$Species==Species]
+    B2 <- control.pars$B2[control.pars$Species==Species]
+    B1 <- control.pars$B1[control.pars$Species==Species]
     
     harv <- ifelse(estimated.biomass >= B1, H1,
-                   ifelse(estimated.biomass > B1 & estimated.biomass <= B2,
+                   ifelse(estimated.biomass < B1 & estimated.biomass >= B2,
                           (H1-H2)/(B1-B2)*(estimated.biomass - B2) + H2,
-                          ifelse(estimated.biomass > B2 & estimated.biomass < B3, H2,
-                                 ifelse(estimated.biomass > B3,
-                                        (H2-H3)/(B2-B3)*(estimated.biomass - B3) + H3
-                                 ))))
+                          ifelse(estimated.biomass < B2 & estimated.biomass >= B3, H2,
+                                 ifelse(estimated.biomass < B3 & estimated.biomass > B4,
+                                        (H2-H3)/(B2-B3)*(estimated.biomass - B3) + H3,
+                                        ifelse(estimated.biomass <= B4, H3
+                                 )))))
     return(harv)
   }
 ```
@@ -517,9 +519,9 @@ for(iyear in 2023:2042){
   index.had <- new.had$ObsBio
   index.her <- new.her$ObsBio
   
-  TAC.cod <- control(index.cod, control.pars) * index.cod
-  TAC.had <- control(index.had, control.pars) * index.had
-  TAC.her <- control(index.her, control.pars) * index.her
+  TAC.cod <- control(index.cod, control.pars, Species = "Cod") * index.cod
+  TAC.had <- control(index.had, control.pars, Species = "Haddock") * index.had
+  TAC.her <- control(index.her, control.pars, Species = "AtlHerring") * index.her
   
   #proportion TAC
   TAC.cod.lgm <- TAC.cod * props[Group == 'Cod', OtterTrawlLg]

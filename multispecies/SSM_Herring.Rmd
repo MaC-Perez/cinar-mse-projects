@@ -1,8 +1,8 @@
 ---
-title: "CINAR MSE Workshop: First MSE"
-author: "Team Multispecies"
+title: "Haddock SS Assessment"
+author: "AMiller"
 date: "January 2022"
-output: github_document
+output: pdf_document
 ---
 
 
@@ -10,31 +10,13 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### Introduction to MSE cod example
-
-Here we will work through a simple example of applying MSE. Later this week we will take a more modular approach to implementing MSEs, but we walk through steps here to give you a flavor for how the pieces work and can be put together.  
-
-This lab is based (heavily) on tutorial by Katell Hamon & Jan-Jaap Poos, published in Chapter 3 of Edwards & Dankel (eds): _"Management Science in Fisheries, An introduction to simulation-based methods"_. All errors below are completely the fault of GF.  
-
-We consider a fishery for a population of _Sebastes electronicus_:  
-* the operating model population dynamics are governed by a logistic (Schaefer) production model.  
-* Data available from the fishery are the catch (known without error), and a biomass index (e.g. from a survey).   
-* We will apply a simple empirical harvest control rule to demonstrate the MSE, and use a small set of performance statistics to compare among alternative versions of the HCR.  
-
-There are plenty of places where additional complexity can be built in to this example. We encourage you to play around with adding functionality of interest. Some options could include adding a model-based control rule, changing the dynamics of the operating model, applying the control rule every 3 years instead of every year, etc.  
-* However, you should be able to walk through this tutorial without tweaks if you just want to get a feel for how things work.  
-
-We assume you have installed `R` on your computer and have an appropriate text editor or development environment (e.g. `Rstudio`).  
-First we install some libraries in `R` that we will use later.  
-_(If you do not have these packages installed then see the code on the landing page of the website to 'install.packages()')_  
+  
 ```{r, results='hide'}
 library(tidyverse)
 library(ggdist)
 library(Hmisc)
 library(mvtnorm)
-library(here)
 ```
-
 
 
 #### The Operating Model  
@@ -50,33 +32,22 @@ We assume that the population is at carrying capacity in the first year of our s
 
 Our first task is to condition our operating model, that we will then use to perform the MSE simulations.  
 
-#####Specify input data and associated years
+#####Input data and associated years
 ```{r}
-data.years <- 1991:2013
-harvest <- c(0.1,3,15,52,76,139,95,93,84,93,86,103,104,
-             92,46,67,59,30,54,59,47,33,44)
-index <- c(NA,NA,NA,NA,NA,NA,NA,NA,935,NA,1057,NA,678,NA,
-           420,NA,554,NA,458,NA,474,NA,280)
-
 load(here("multispecies/data/GBdata.rda"))
-cod <- subset(GB.data, Species=="Cod")
-data.years <- cod$Year
-harvest <- cod$TotCatch
-index <- cod$ObsBio
-
-
+AtlHerring <- subset(GB.data, Species=="AtlHerring")
+data.years <- AtlHerring$Year
+harvest <- AtlHerring$TotCatch
+index <- AtlHerring$ObsBio
 ```
-We create time series of the years, catches (harvest), and biomass index data for our historical period that are already available.  
+ 
 
 We can plot these:  
 ```{r}
 plot(data.years,index, pch=19,xlab="Year",ylab="Million tonnes (B/C)",
-     ylim=c(0,max(cod$ObsBio)))
+     ylim=c(0,12))
 lines(data.years,harvest,lty=2,lwd=2)
 ```
-
-We see that the biomass index has been declining.  
-
 
 Now we will create some functions to use as we develop the operating model.  
 
@@ -173,33 +144,42 @@ Now we have written the functions to do the calculations, we can run them and pe
 
 First define initial parameter vector for: log(K), log(r), log(sigma)  
 ```{r}
-ini.parms <- c(-0.6,-0.3 ,-2.1 )
+
+# maxsvB.GBcod <- max(index.GBcod)
+# ini.parms.GBcod <- c(log(maxsvB.GBcod), log(0.2), log(0.3))
+
+maxsvB.GBherring <- max(index)
+ini.parms.GBherring <- c(log(maxsvB.GBherring), log(0.3), log(0.3))
+
+#maxsvB.GBhaddock <- max(index.GBhaddock)
+#ini.parms.GBhaddock <- c(log(maxsvB.GBhaddock), log(0.3), log(0.3))
+
+
 ```
 
 Fit the logistic model to data:  
 ```{r}
-cod <- assess(harvest,index,calc.vcov=TRUE,ini.parms)
-cod
+GBHerring <- assess(harvest,index,calc.vcov=TRUE,ini.parms.GBherring)
+GBHerring
 ```
 
 Extract the maximum likelihood and parameter estimates  
 ```{r}
-biomass.mle <- cod$biomass
+biomass.mle <- GBHerring$biomass
 print(biomass.mle)
-pars.mle <- cod$pars
+pars.mle <- GBHerring$pars
 print(exp(pars.mle))
 ```
 
-Estimate the reference points
 ```{r}
 BMSY <- pars.mle[1]/2
 Fmsy <- pars.mle[2]/2
 ```
 
-
-
 To obtain a set of plausible alternatives for the parameters of the operating model, we will use the statistical uncertainty from the estimation by sampling parameter sets from the estimated variance-covariance matrix.  
 ```{r}
+set.seed(4589)
+
 #define the number of iterations for the MSE 
 niter <- 200 
 #set up a storage matrix for our alternative parameter sets
@@ -208,8 +188,8 @@ colnames(pars.iter) <- c("log_K","log_r","log_sigma")
 
 # generate the sets of parameter values
 for (i in 1:niter) {
-  pars.iter[i,] <- mvtnorm::rmvnorm(1, mean = cod$pars,
-                       sigma = cod$vcov)
+  pars.iter[i,] <- mvtnorm::rmvnorm(1, mean = GBHerring$pars,
+                       sigma = GBHerring$vcov)
 }
 
 # Now generate replicate model outputs
@@ -222,7 +202,7 @@ for (i in 1:niter) {
                                    biomass = dynamics(pars.iter[i,], harvest),
                                    iter = i))
 }
-head(biomass.iter)
+biomass.iter
 ```
 
 
@@ -241,7 +221,7 @@ biomass.iter %>%
   geom_point(aes(y=index, x=year), data = data.frame(index=index, 
                year = data.years)) +
   #geom_line(aes(y=biomass,x=year,group=iter,col=iter),data = subset(biomass.iter,iter%in%1:10)) +
-      ylab("Rel Biomass") + 
+      ylab("Estimated B and C (million tonnes)") + 
   theme_bw() +
   guides(scale = "none")
   
@@ -276,11 +256,10 @@ This function takes the true biomass from the operating model, and generates the
 
 ##### Harvest Control Rule
 
-We first demonstrate the MSE using a fixed target exploitation rate - the control rule calculates the catch for next year based on a fixed percentage (75%) of the Fmsy estimate applied to current biomass.  
+We first demonstrate the MSE using a fixed target exploitation rate - the control rule calculates the catch for next year based on a fixed percentage (10%) of the most recent biomass estimate.  
 ```{r}
 control.pars <- list()
 control.pars$Htarg <- 0.75*Fmsy
-
 control <- function(estimated.biomass, control.pars) {
   control.pars$Htarg
 }
@@ -353,7 +332,7 @@ We will first step through this for one iteration to view how things work.
                             type= "biomass", iter=i)) 
     #end loop over iterations
   #}
-  head(res)
+  res
 #  return(res)
 #  #end function evaluate()
 #}
@@ -423,7 +402,7 @@ evaluate <- function(pars.iter, biomass.iter,
 ```
 
 
-Project with fixed 75%Fmsy of estimated biomass for all iterations & 20 yrs  
+Project with fixed 10% exploitation rate of estimated biomass for all iterations & 20 yrs  
 ```{r}
 project.fixed <- evaluate(pars.iter, biomass.iter, control.pars, data.years,
                           proj.years, niter)
@@ -464,202 +443,6 @@ Plot the projection:
 projection.plot(project.fixed)
 ```
 
-## UNCHANGED BELOW HERE aside from Rpath cod data
-
-#### Management using alternative harvest control rules
-
-Define a HCR that converts estimated biomass into a harvest rate using a functional form determined by values in 'control.pars'.  
 ```{r}
-control <- function(estimated.biomass, control.pars) {
-  H1 <- control.pars$H1
-  H2 <- control.pars$H2
-  Bmax <- control.pars$Bmax
-  B2 <- control.pars$B2
-  B1 <- control.pars$B1
-  
-  harv <- ifelse(estimated.biomass >= B1, H1,
-                 ifelse(estimated.biomass < B2, H2,
-                        (H1-H2)/(B1-B2)*(estimated.biomass - B2) + H2))
-  
-  return(harv)
-  
-  #end function control
-}
+saveRDS(project.fixed, file = here("multispecies/data/SS_Herring.rds"))
 ```
-
-
-Define control parameters for HCR using reference points  
-We (arbitrarily) set the threshold and limit biomass reference points as 50% & 20% of the maximum observed survey index value during the historical period.  
-The target exploitation rate is set at 5%.  
-```{r}
-control.pars <- list()
-control.pars$H1 <- 0.05
-control.pars$H2 <- 0
-control.pars$Bmax <- max(index, na.rm =TRUE)
-control.pars$B2 <- 0.2*control.pars$Bmax
-control.pars$B1 <- 0.5*control.pars$Bmax
-```
-
-
-Plot the HCR shape:  
-```{r}
-plot(c(0,control.pars$B2,control.pars$B1,control.pars$Bmax),
-     c(control.pars$H2,control.pars$H2,control.pars$H1,control.pars$H1),
-     type='l',axes=F,xlab="estimated biomass",ylab="exploitation rate",
-     ylim=c(0,1.2*control.pars$H1))
-axis(1,at=c(control.pars$B2,control.pars$B1),labels=c("B2","B1"))
-axis(2,at=c(control.pars$H2,control.pars$H1),labels=c("H2","H1"))
-box()
-```
-
-
-Conduct the evaluation by projecting system forward in time
-```{r}
-project.hcr <- evaluate(pars.iter, biomass.iter, control.pars,
-                        data.years, proj.years, niter)
-```
-Plot the trajectories:  
-```{r}
-projection.plot(project.hcr)
-```
-
-
-Now let's add potential for overshooting the TAC  
-```{r}
-implement <- function(TAC, overshoot, ...) {
-  TAC * (1 + overshoot)
-}
-```
-
-
-#### Comparing different HCRs & accounting for possible TAC overshoot
-
-Set the HCR parameters
-```{r}
-control.pars <- list()
-control.pars$H1 <- 0.05
-control.pars$H2 <- 0
-control.pars$Bmax <- max(index, na.rm =TRUE)
-control.pars$B2 <- 0.2*control.pars$Bmax
-control.pars$B1 <- 0.5*control.pars$Bmax
-```
-
-Conduct the base scenario (no TAC overshoot)  
-```{r}
-proj.hcr1.noerror <- evaluate(pars.iter, biomass.iter,
-                          control.pars, data.years,
-                          proj.years, niter,
-                          overshoot = 0)
-```
-
-Now run the HCR with 20% overshoot in TAC
-```{r}
-proj.hcr1.error <- evaluate(pars.iter, biomass.iter,
-                              control.pars, data.years,
-                              proj.years, niter,
-                              overshoot = 0.2)
-```
-
-
-We will further do two more HCRs where we increase the target harvest rate:  
-```{r}
-control.pars$H1 <- 0.15
-```
-
-Run both scenarios with this new target harvest rate  
-```{r}
-proj.hcr2.noerror <- evaluate(pars.iter, biomass.iter,
-                              control.pars, data.years,
-                              proj.years, niter,
-                              overshoot = 0)
-proj.hcr2.error <- evaluate(pars.iter, biomass.iter,
-                            control.pars, data.years,
-                            proj.years, niter,
-                            overshoot = 0.2)
-```
-
-
-#### Diagnostics
-
-We have run the evaluations for 4 HCRs. We can now compare these.  
-Create an object containing all the results:    
-```{r}
-MSE <- rbind(cbind(proj.hcr1.noerror, HCR="hcr1",
-                   implement = "no overshoot"),
-             cbind(proj.hcr1.error, HCR="hcr1",
-                   implement = "20% overshoot"),
-             cbind(proj.hcr2.noerror, HCR="hcr2",
-                   implement = "no overshoot"),
-             cbind(proj.hcr2.error, HCR="hcr2",
-                   implement = "20% overshoot"))
-head(MSE)
-```
-
-Summarize biomass & catch for all 4 options:  
-```{r}
-Fig5 <- ggplot(data=subset(MSE, type !="index" &
-                          year %in% proj.years), 
-               aes(x=HCR, y=value, ymin=0))
-Fig5 + geom_boxplot(aes(fill=implement), width = 1) + facet_wrap(~type, scale="free_y") + ylab("Million tonnes") + scale_fill_grey(start=0.5) + theme_bw()
-```
-We immediately see a yield-biomass tradeoff - HCR2 gives more catch but leads to lower biomass.  There is not much change when the catch is 20% higher than the TAC.   
-
-
-
-#### Performance statistics
-```{r}
-#Yield based metrics  (e.g. average annual catch)
-#Stock Biomass metrics (e.g. distribution for B/BMSY, P(B>BLIM), etc.)
-#Inter-annual stability of catch advice (e.g. how often the control rule closes the fishery)
-
-aac2 <- with(MSE[MSE$year>max(data.years) & MSE$type=="catch",],
-            aggregate(value,by=list(iter=iter,HCR=HCR,implement=implement),FUN=mean,na.rm=TRUE))
-
-
-Fig6 <- ggplot(data=subset(aac2), 
-               aes(x=HCR, y=x, ymin=0))
-Fig6 + geom_boxplot(aes(fill=implement), width = 1)  + ylab("Million tonnes") + scale_fill_grey(start=0.5) + theme_bw()
-
-# years B > BLIM
-# BLIM = 0.25*K  (we specify BLIM for our performance as half BMSY)
-blim <- 0.25*exp(pars.iter[,1])
-
-num.above <- function(vec,threshold) {
- length(vec[vec>threshold])/length(vec)
-}
-MSE$blim <- blim[MSE$iter]
-MSE$above.blim <- ifelse(MSE$value>MSE$blim,1,0)
-
-above.blim <- with(MSE[MSE$year>max(data.years) & MSE$type=="biomass",],
-            aggregate(above.blim,by=list(iter=iter,HCR=HCR,implement=implement),FUN=sum,na.rm=TRUE))
-above.blim$x <- above.blim$x/length(proj.years)
-
-Fig7 <- ggplot(data=subset(above.blim), 
-               aes(x=HCR, y=x, ymin=0))
-Fig7 + geom_boxplot(aes(fill=implement), width = 1)  + ylab("Proportion of years above BLIM") + scale_fill_grey(start=0.5) + theme_bw()
-
-# num years fishery is open
-not.closed <- with(MSE[MSE$year>max(data.years) & MSE$type=="catch",],
-             aggregate(value,by=list(iter=iter,HCR=HCR,implement=implement),FUN=num.above,threshold=0))
-
-Fig8 <- ggplot(data=subset(not.closed), 
-               aes(x=HCR, y=x, ymin=0))
-Fig8 + geom_boxplot(aes(fill=implement), width = 1)  + ylab("Proportion of years TAC > 0") + scale_fill_grey(start=0.5) + theme_bw()
-
-```
-
-
-
-### Next Steps  
-
-Your turn to add features!  
-
-Suggestions:  
-1. Produce a trade-off plot (hint: perhaps think about some alternative performance statistics that integrate across iterations)  
-2. Add a model-based control rule by performing a stock assessment (e.g. production model) each year in the projection period. Then use the catch associated with the estimated FMSY as the TAC. Be careful not to give the assessment model the true parameter values from the operating model.  
-3. Implement the HCR every 3 yrs rather than every 1.  
-4. Add a more complicated implementation function (say based on price?)  
-5. Add environmental variability (process error) into the population dynamics  
-
-
-
