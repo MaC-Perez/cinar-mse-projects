@@ -464,6 +464,10 @@ Plot the projection:
 projection.plot(project.fixed)
 ```
 
+```{r}
+saveRDS(project.fixed, file = here("multispecies/data/SS_Cod.rds"))
+```
+
 ## UNCHANGED BELOW HERE aside from Rpath cod data
 
 #### Management using alternative harvest control rules

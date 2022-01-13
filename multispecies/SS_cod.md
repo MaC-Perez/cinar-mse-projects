@@ -323,12 +323,12 @@ head(biomass.iter)
 ```
 
     ##   year   biomass iter
-    ## 1 1983 0.5170618    1
-    ## 2 1984 0.5152539    1
-    ## 3 1985 0.5149439    1
-    ## 4 1986 0.5148746    1
-    ## 5 1987 0.5148521    1
-    ## 6 1988 0.5148429    1
+    ## 1 1983 0.5086837    1
+    ## 2 1984 0.5068759    1
+    ## 3 1985 0.5064191    1
+    ## 4 1986 0.5062899    1
+    ## 5 1987 0.5062476    1
+    ## 6 1988 0.5062318    1
 
 We can now plot the estimated biomass time series
 
@@ -503,12 +503,12 @@ tail(project.fixed)
 ```
 
     ##       year     value    type iter
-    ## 36795 2038 0.5730961 biomass  200
-    ## 36796 2039 0.5754560 biomass  200
-    ## 36797 2040 0.5731751 biomass  200
-    ## 36798 2041 0.5704772 biomass  200
-    ## 36799 2042 0.5712399 biomass  200
-    ## 36800 2043 0.5676463 biomass  200
+    ## 36795 2038 0.5816132 biomass  200
+    ## 36796 2039 0.5882848 biomass  200
+    ## 36797 2040 0.5766320 biomass  200
+    ## 36798 2041 0.5912555 biomass  200
+    ## 36799 2042 0.5769966 biomass  200
+    ## 36800 2043 0.5757080 biomass  200
 
 We can view the trajectories of catch and operating model biomass from
 the output.  
@@ -547,6 +547,10 @@ projection.plot(project.fixed)
 ```
 
 ![](SS_cod_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+
+``` r
+saveRDS(project.fixed, file = here("multispecies/data/SS_Cod.rds"))
+```
 
 ## UNCHANGED BELOW HERE aside from Rpath cod data
 
@@ -600,7 +604,7 @@ axis(2,at=c(control.pars$H2,control.pars$H1),labels=c("H2","H1"))
 box()
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+![](SS_cod_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
 
 Conduct the evaluation by projecting system forward in time
 
@@ -615,7 +619,7 @@ Plot the trajectories:
 projection.plot(project.hcr)
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+![](SS_cod_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
 
 Now let’s add potential for overshooting the TAC
 
@@ -710,7 +714,7 @@ Fig5 <- ggplot(data=subset(MSE, type !="index" &
 Fig5 + geom_boxplot(aes(fill=implement), width = 1) + facet_wrap(~type, scale="free_y") + ylab("Million tonnes") + scale_fill_grey(start=0.5) + theme_bw()
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-35-1.png)<!-- --> We
+![](SS_cod_files/figure-gfm/unnamed-chunk-36-1.png)<!-- --> We
 immediately see a yield-biomass tradeoff - HCR2 gives more catch but
 leads to lower biomass. There is not much change when the catch is 20%
 higher than the TAC.
@@ -731,7 +735,7 @@ Fig6 <- ggplot(data=subset(aac2),
 Fig6 + geom_boxplot(aes(fill=implement), width = 1)  + ylab("Million tonnes") + scale_fill_grey(start=0.5) + theme_bw()
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
+![](SS_cod_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
 
 ``` r
 # years B > BLIM
@@ -753,7 +757,7 @@ Fig7 <- ggplot(data=subset(above.blim),
 Fig7 + geom_boxplot(aes(fill=implement), width = 1)  + ylab("Proportion of years above BLIM") + scale_fill_grey(start=0.5) + theme_bw()
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-36-2.png)<!-- -->
+![](SS_cod_files/figure-gfm/unnamed-chunk-37-2.png)<!-- -->
 
 ``` r
 # num years fishery is open
@@ -765,7 +769,7 @@ Fig8 <- ggplot(data=subset(not.closed),
 Fig8 + geom_boxplot(aes(fill=implement), width = 1)  + ylab("Proportion of years TAC > 0") + scale_fill_grey(start=0.5) + theme_bw()
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-36-3.png)<!-- -->
+![](SS_cod_files/figure-gfm/unnamed-chunk-37-3.png)<!-- -->
 
 ### Next Steps
 
