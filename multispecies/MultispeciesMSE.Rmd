@@ -504,9 +504,8 @@ SSBMSY <- pars %>%
   select(Species, BMSY)
 
 SSFmsy <- pars %>%
-  select(-value) %>%
-  pivot_wider(names_from = "Par", values_from = "exppar") %>%
-  mutate(Fmsy=(logr*logK)/4) %>% #so these par names are wrong because the values are exp(par)
+  filter(Par=="logr") %>%
+  mutate(Fmsy=exppar/2) %>%
   select(Species, Fmsy)
 
 ```
