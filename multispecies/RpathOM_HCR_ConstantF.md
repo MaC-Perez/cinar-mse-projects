@@ -473,10 +473,15 @@ SS.BMSY <- pars %>%
   mutate(BMSY=exppar/2) %>%
   select(Species, BMSY)
 
+# SS.Fmsy <- pars %>%
+#   select(-value) %>%
+#   pivot_wider(names_from = "Par", values_from = "exppar") %>%
+#   mutate(Fmsy=(logr*logK)/4) %>% #so these par names are wrong because the values are exp(par)
+#   select(Species, Fmsy)
+
 SS.Fmsy <- pars %>%
-  select(-value) %>%
-  pivot_wider(names_from = "Par", values_from = "exppar") %>%
-  mutate(Fmsy=(logr*logK)/4) %>% #so these par names are wrong because the values are exp(par)
+  filter(Par == 'logr') %>%
+  mutate(Fmsy= exppar/4) %>% #so these par names are wrong because the values are exp(par)
   select(Species, Fmsy)
 ```
 
@@ -650,3 +655,5 @@ ggplot(GB.bio[Group %in% c('Cod', 'Haddock', 'AtlHerring')],
 ```
 
 ![](RpathOM_HCR_ConstantF_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+
+Summarize the results
