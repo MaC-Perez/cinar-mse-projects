@@ -1,10 +1,11 @@
 # for adding Harvest Control Rule HCR function
 
 #Constant F
-control <-  function() {
-  
+control <-  function(estimated.biomass, control.pars) {
+  harv <- control.pars$Hmax
 }
 
+#Conditional F
 #control <- function(estimated.biomass, control.pars) {
 #  H1 <- control.pars$H1
 #  H2 <- control.pars$H2
