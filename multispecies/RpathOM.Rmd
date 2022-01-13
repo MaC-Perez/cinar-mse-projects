@@ -356,6 +356,45 @@ GB.data %>%
 
 ```
 
+Single species reference points for HCRs
+Pars from SS models above
+```{r}
+pars.cod <- data.frame(value= GBcod$pars,
+                       Par=c("logK", "logr", "logsigma"),
+                       Species="Cod")
+
+pars.herring <- data.frame(value= GBherring$pars,
+                           Par=c("logK", "logr", "logsigma"), 
+                           Species="AtlHerring")
+
+pars.haddock <- data.frame(value= GBhaddock$pars,
+                           Par=c("logK", "logr", "logsigma"),
+                           Species="Haddock")
+
+pars <- bind_rows(pars.cod, pars.herring, pars.haddock) %>%
+  mutate(exppar = exp(value)) 
+```
+
+Reference points from single species models above for each species.
+
+These are going into Rpath so ok to leave on this scale.
+
+```{r}
+
+SS.BMSY <- pars %>%
+  filter(Par=="logK") %>%
+  mutate(BMSY=exppar/2) %>%
+  select(Species, BMSY)
+
+SS.Fmsy <- pars %>%
+  select(-value) %>%
+  pivot_wider(names_from = "Par", values_from = "exppar") %>%
+  mutate(Fmsy=(logr*logK)/4) %>% #so these par names are wrong because the values are exp(par)
+  select(Species, Fmsy)
+
+```
+
+
 # Set-up Rsim simulation and the closed loop
 
 ## Harvest control rules

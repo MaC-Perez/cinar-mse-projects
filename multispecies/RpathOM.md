@@ -444,6 +444,42 @@ GB.data %>%
 
 ![](RpathOM_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
+Single species reference points for HCRs Pars from SS models above
+
+``` r
+pars.cod <- data.frame(value= GBcod$pars,
+                       Par=c("logK", "logr", "logsigma"),
+                       Species="Cod")
+
+pars.herring <- data.frame(value= GBherring$pars,
+                           Par=c("logK", "logr", "logsigma"), 
+                           Species="AtlHerring")
+
+pars.haddock <- data.frame(value= GBhaddock$pars,
+                           Par=c("logK", "logr", "logsigma"),
+                           Species="Haddock")
+
+pars <- bind_rows(pars.cod, pars.herring, pars.haddock) %>%
+  mutate(exppar = exp(value)) 
+```
+
+Reference points from single species models above for each species.
+
+These are going into Rpath so ok to leave on this scale.
+
+``` r
+SS.BMSY <- pars %>%
+  filter(Par=="logK") %>%
+  mutate(BMSY=exppar/2) %>%
+  select(Species, BMSY)
+
+SS.Fmsy <- pars %>%
+  select(-value) %>%
+  pivot_wider(names_from = "Par", values_from = "exppar") %>%
+  mutate(Fmsy=(logr*logK)/4) %>% #so these par names are wrong because the values are exp(par)
+  select(Species, Fmsy)
+```
+
 # Set-up Rsim simulation and the closed loop
 
 ## Harvest control rules
@@ -502,6 +538,18 @@ GB.scene <- adjust.fishing(GB.scene, parameter = 'ForcedEffort', group = 'Midwat
                            sim.year = 1983:2017, value = c(rep(0, 15), rep(2.5, 5),
                                                            rep(5, 5), rep(10, 5),
                                                            rep(2.5, 5)))
+
+#Hopefully fixes the instability in the model
+GB.scene$params$NoIntegrate[which(names(GB.scene$params$NoIntegrate) %in%
+                                    c('Micronekton', 'GelZooplankton', 'Krill'))] <- 0
+# det.node <- which(names(GB.scene$start_state$Biomass) == 'Detritus')
+# pp.node  <- which(names(GB.scene$start_state$Biomass) == 'Phytoplankton')
+# GB.scene <- adjust.forcing(GB.scene, 'ForcedBio', group = 'Detritus',
+#                            sim.year = 1983:2042, 
+#                            value = GB.scene$start_state$Biomass[det.node])
+# GB.scene <- adjust.forcing(GB.scene, 'ForcedBio', group = 'Phytoplankton',
+#                            sim.year = 1983:2042, 
+#                            value = GB.scene$start_state$Biomass[pp.node])
 
 GB.run <- rsim.run(GB.scene, years = 1983:2022, method = 'AB')
 ```
@@ -590,4 +638,4 @@ ggplot(GB.bio[Group %in% c('Cod', 'Haddock', 'AtlHerring')],
   geom_line()
 ```
 
-![](RpathOM_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](RpathOM_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
