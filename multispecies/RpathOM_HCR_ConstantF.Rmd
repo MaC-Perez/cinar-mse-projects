@@ -386,12 +386,16 @@ SS.BMSY <- pars %>%
   mutate(BMSY=exppar/2) %>%
   select(Species, BMSY)
 
-SS.Fmsy <- pars %>%
-  select(-value) %>%
-  pivot_wider(names_from = "Par", values_from = "exppar") %>%
-  mutate(Fmsy=(logr*logK)/4) %>% #so these par names are wrong because the values are exp(par)
-  select(Species, Fmsy)
+# SS.Fmsy <- pars %>%
+#   select(-value) %>%
+#   pivot_wider(names_from = "Par", values_from = "exppar") %>%
+#   mutate(Fmsy=(logr*logK)/4) %>% #so these par names are wrong because the values are exp(par)
+#   select(Species, Fmsy)
 
+SS.Fmsy <- pars %>%
+  filter(Par == 'logr') %>%
+  mutate(Fmsy= exppar/4) %>% #so these par names are wrong because the values are exp(par)
+  select(Species, Fmsy)
 ```
 
 
@@ -551,6 +555,15 @@ ggplot(GB.bio[Group %in% c('Cod', 'Haddock', 'AtlHerring')],
        aes(x = Month, y = Rel.biomass, col = Group)) +
   geom_line()
 ```
+
+Summarize the results
+```{r}
+
+```
+
+
+
+
 
 
 
