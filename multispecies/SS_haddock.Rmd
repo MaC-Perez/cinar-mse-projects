@@ -171,20 +171,20 @@ Now we have written the functions to do the calculations, we can run them and pe
 
 First define initial parameter vector for: log(K), log(r), log(sigma)  
 ```{r}
-ini.parms <- c(-0.6,-0.3 ,-2.1 )
+ini.parms <- c(-0.9,-0.3 ,-2.1 )
 ```
 
 Fit the logistic model to data:  
 ```{r}
-redfish <- assess(harvest,index,calc.vcov=TRUE,ini.parms)
-redfish
+haddock <- assess(harvest,index,calc.vcov=TRUE,ini.parms)
+haddock
 ```
 
 Extract the maximum likelihood and parameter estimates  
 ```{r}
-biomass.mle <- redfish$biomass
+biomass.mle <- haddock$biomass
 print(biomass.mle)
-pars.mle <- redfish$pars
+pars.mle <- haddock$pars
 print(exp(pars.mle))
 ```
 
@@ -199,8 +199,8 @@ colnames(pars.iter) <- c("log_K","log_r","log_sigma")
 
 # generate the sets of parameter values
 for (i in 1:niter) {
-  pars.iter[i,] <- mvtnorm::rmvnorm(1, mean = redfish$pars,
-                       sigma = redfish$vcov)
+  pars.iter[i,] <- mvtnorm::rmvnorm(1, mean = haddock$pars,
+                       sigma = haddock$vcov)
 }
 
 # Now generate replicate model outputs
@@ -270,7 +270,7 @@ This function takes the true biomass from the operating model, and generates the
 We first demonstrate the MSE using a fixed target exploitation rate - the control rule calculates the catch for next year based on a fixed percentage (10%) of the most recent biomass estimate.  
 ```{r}
 control.pars <- list()
-control.pars$Htarg <- 0.75*SS.Fmsy$Fmsy[1]
+control.pars$Htarg <- 0.75*SS.Fmsy$Fmsy[3]
 
 control <- function(estimated.biomass, control.pars) {
   control.pars$Htarg
