@@ -399,15 +399,47 @@ SS.Fmsy <- pars %>%
 
 ## Harvest control rules
 
-### 10% F strategy
-Once again, using the example from [my-first-mse](https://github.com/gavinfay/cinar-mse/blob/main/materials/exercises/day-01/my-first-mse.Rmd)) we'll start with a simple 10% F strategy.  This will be somewhat complicated due to the multiple fleets/species interactions as we get further along.
+### Multilevel HCR strategy
+We start with the framework for the more complex control rule, using the example from [my-first-mse](https://github.com/gavinfay/cinar-mse/blob/main/materials/exercises/day-01/my-first-mse.Rmd)).  
+
+This HCR is intended to implement different F levels at different population levels for each species. At moderate stock levels F is intermediate, below the target biomass F declines to the limit B and then is held steady at a low level. F does not decline to 0 in order to maintain social and economic fishery objectives. At very high stock levels, F increases to prevent ecxessive biomass of predators. 
+
+We can adjust the parameters by species if needed, but here apply the same to all.
+
+This will be somewhat complicated due to the multiple fleets/species interactions as we get further along.
 
 ```{r}
 control.pars <- list()
-control.pars$Htarg <- 0.1
-control <- function(estimated.biomass, control.pars) {
-control.pars$Htarg
-}
+
+control.pars$Species <- SS.Fmsy$Species
+control.pars$Htarg1 <- 0.1*SS.Fmsy$Fmsy 
+control.pars$Htarg2 <- 0.5*SS.Fmsy$Fmsy 
+control.pars$Htarg3 <- 0.75*SS.Fmsy$Fmsy 
+
+
+
+#Plateau-slope-plateau-slop HCR  
+  control <- function(estimated.biomass, control.pars, Species) {
+    
+    control.pars$Htarg[control.pars$Species==Species]
+    
+    H1 <- control.pars$H1
+    H2 <- control.pars$H2
+    H3 <- control.pars$H3
+    Bmax <- control.pars$Bmax
+    B3 <- control.pars$B3
+    B2 <- control.pars$B2
+    B1 <- control.pars$B1
+    
+    harv <- ifelse(estimated.biomass >= B1, H1,
+                   ifelse(estimated.biomass > B1 & estimated.biomass <= B2,
+                          (H1-H2)/(B1-B2)*(estimated.biomass - B2) + H2,
+                          ifelse(estimated.biomass > B2 & estimated.biomass < B3, H2,
+                                 ifelse(estimated.biomass > B3,
+                                        (H2-H3)/(B2-B3)*(estimated.biomass - B3) + H3
+                                 ))))
+    return(harv)
+  }
 ```
 
 We assume perfect implementation of the strategy - in that the realized catch is the same as the TAC.  Will also have to convert the catch target to effort as that is what drives the Rsim dynamics.  Rpath standardizes Effort to 1 so $Catch = qEB$ simplifies to $C = qB$ so $q = C/B$ or the initial $F$.  
