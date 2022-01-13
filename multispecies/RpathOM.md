@@ -503,6 +503,18 @@ GB.scene <- adjust.fishing(GB.scene, parameter = 'ForcedEffort', group = 'Midwat
                                                            rep(5, 5), rep(10, 5),
                                                            rep(2.5, 5)))
 
+#Hopefully fixes the instability in the model
+GB.scene$params$NoIntegrate[which(names(GB.scene$params$NoIntegrate) %in%
+                                    c('Micronekton', 'GelZooplankton', 'Krill'))] <- 0
+# det.node <- which(names(GB.scene$start_state$Biomass) == 'Detritus')
+# pp.node  <- which(names(GB.scene$start_state$Biomass) == 'Phytoplankton')
+# GB.scene <- adjust.forcing(GB.scene, 'ForcedBio', group = 'Detritus',
+#                            sim.year = 1983:2042, 
+#                            value = GB.scene$start_state$Biomass[det.node])
+# GB.scene <- adjust.forcing(GB.scene, 'ForcedBio', group = 'Phytoplankton',
+#                            sim.year = 1983:2042, 
+#                            value = GB.scene$start_state$Biomass[pp.node])
+
 GB.run <- rsim.run(GB.scene, years = 1983:2022, method = 'AB')
 ```
 
