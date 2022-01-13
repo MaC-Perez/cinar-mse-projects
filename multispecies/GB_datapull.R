@@ -59,6 +59,7 @@ GenData <- function(Rsim.output, group, sim.year, Sigma = 0.3, bias = 1, freq = 
   return(out)
 } 
 
+setkey(123)
 cod <- GenData(GB.run, 'Cod', 1983:2022, Sigma = 0.1)  
 haddock <- GenData(GB.run, 'Haddock', 1983:2022, Sigma = 0.1)
 atlherring <- GenData(GB.run, 'AtlHerring', 1983:2022, Sigma = 0.1)
