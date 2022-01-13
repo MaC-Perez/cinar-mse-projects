@@ -481,7 +481,7 @@ SS.BMSY <- pars %>%
 
 SS.Fmsy <- pars %>%
   filter(Par == 'logr') %>%
-  mutate(Fmsy= exppar/4) %>% #so these par names are wrong because the values are exp(par)
+  mutate(Fmsy= exppar/2) %>% 
   select(Species, Fmsy)
 ```
 
