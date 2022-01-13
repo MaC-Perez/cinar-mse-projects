@@ -594,7 +594,8 @@ harvest.GB3 <- GB.data %>%
   unname()
 ```
 
-Modify other functions for vectors and matrices
+Modify other functions for vectors and matrices **THIS ISN’T DONE and
+DOESN’T WORK**
 
 ``` r
 msdynamics <- function(pars,C,yrs) {
@@ -604,7 +605,7 @@ msdynamics <- function(pars,C,yrs) {
   # first extract the parameters from the pars matrix (we estimate K in log-space)
   K <- exp(pars[1,])
   r <- exp(pars[2,])
-  alpha
+  alpha <- matrix(0,3,3)
   
   # number of species
   nsp <- dim(C)[2]
@@ -623,7 +624,7 @@ msdynamics <- function(pars,C,yrs) {
   B[1] <- K
   # project the model forward using the schaefer model
   for (y in 2:nyr) {
-    B[y] <- schaefer(B[y-1],C[y-1],K,r)
+    B[y] <- schaefer(B[y-1],C[y-1],K,r alpha)
   }
   
   #return the time series of biomass
@@ -745,12 +746,12 @@ Nyr <- 30
 Nsims <- 5
 
 ### get historical time series of biomass and catch
-NI <- as.data.frame(index.GB3)  #read.table(datfile,skip=69,nrow=33,header=FALSE)
+NI <- as.matrix(index.GB3)  #read.table(datfile,skip=69,nrow=33,header=FALSE)
 #NI <- NI[,-1] #this cuts off a year column that I don't have in the input
-CI <- as.data.frame(harvest.GB3)  #read.table(datfile,skip=103,nrow=33,header=FALSE)
+CI <- as.matrix(harvest.GB3)  #read.table(datfile,skip=103,nrow=33,header=FALSE)
 
 #redefine functional groups
-theguilds <- c(1,2,3)   #c(1,1,2,2,1,3,3,1,1,1)
+theguilds <- c(1,1,2)   #c(1,1,2,2,1,3,3,1,1,1)
 ```
 
 Bring in the OMfunctions
@@ -759,13 +760,29 @@ Bring in the OMfunctions
 source(here("multispecies/OMfunctions.R"))
 ```
 
+Test the OMfunction
+
+``` r
+#inputs
+# Biomass <- NI #needs to come in as.matrix or won't work
+# Catch <- CI #needs to come in as.matrix or won't work
+# trophic.level <- BMSY[,3]
+# BMSY <- BMSY[,2]
+# is.predator <- which(colSums(alpha)>0)
+# is.pelagic <- which(theguilds==2)
+```
+
 Modify the MSprod run function to use the SS ref pts and HCRs below.
-This is a test with Gavin’s code and our inputs, no change to HCR:
+This is a test with Gavin’s code and our inputs, no change to HCR (aside
+from dropping elasmobranchs):
 
 ``` r
 ############################################
 # RUN MSE WITH SINGLE SPECIES ASSESSMENT
 ############################################
+
+library(deSolve)
+
 #set up a storage object to contain results for each simulation
 ALL.results <- matrix(NA,nrow=Nsims,ncol=4+Nsp)
 
@@ -788,6 +805,7 @@ for (isim in 1:Nsims)
   for (iyr in 2:Nyr)
    {    
     ### hrateG is for groundfish; hrateP is for pelagics; hrateE is for elasmobranches
+    # WARNING These hardcode the order of species and expexct 10, adjusted here but buyer beware
     Qyr2 <- nrow(NI.obs)
     #print(NI.obs)
     # hrate for groundfish depends on cod
@@ -796,19 +814,19 @@ for (isim in 1:Nsims)
     else
      hrateG <-0.1*NI.obs[Qyr2,1]/mean(NI.obs[1:10,1])
     # hrate for pelagics is 0.1 unless there is not enough prey
-    if (NI.obs[Qyr2,4]+NI.obs[Qyr2,5] > 1000)
+    if (NI.obs[Qyr2,3] > 1000) #(NI.obs[Qyr2,4]+NI.obs[Qyr2,5] > 1000)
       hrateP <- 0.3
     else
       hrateP <- 0
-    # hrate for sharks and skates is 0.05 unless we are approximately overfished
-    if (NI.obs[Qyr2,7]+NI.obs[Qyr2,8] >  0.5*mean(NI.obs[1:10,7])+0.5*mean(NI.obs[1:10,8]))
-      hrateE <- 0.05
-    else
-      hrateE <- 0
+    # # hrate for sharks and skates is 0.05 unless we are approximately overfished
+    # if (NI.obs[Qyr2,7]+NI.obs[Qyr2,8] >  0.5*mean(NI.obs[1:10,7])+0.5*mean(NI.obs[1:10,8]))
+    #   hrateE <- 0.05
+    # else
+    #   hrateE <- 0
 
     hrate[theguilds==1] <- hrateG
     hrate[theguilds==2] <- hrateP
-    hrate[theguilds==3] <- hrateE
+    #hrate[theguilds==3] <- hrateE
     ### update operating model with new exploitation rates
     parms=list(r=r,KGuild=KGuild,Ktot=Ktot,Guildmembership=Guildmembership,BetweenGuildComp=BetweenGuildComp,WithinGuildComp=WithinGuildComp,alpha=alpha,hrate=hrate)
     x <- ode(N,seq(iyr-1,(iyr+0.5),0.5),dNbydt,parms=parms,method="rk4")
@@ -847,15 +865,927 @@ for (isim in 1:Nsims)
  for (Isp in 1:Nsp)
    ALL.results[isim,4+Isp] <- sum(ei[(Qyr-9):Qyr,11+Isp])
  }
+```
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+    ## Warning in N * exp(rnorm(10, 0, 0.2) - 0.5 * 0.2 * 0.2): longer object length is
+    ## not a multiple of shorter object length
+
+    ## Warning in rbind(NI.obs, Nobs): number of columns of result is not a multiple of
+    ## vector length (arg 2)
+
+``` r
  print(ALL.results)
+```
+
+    ##          [,1]      [,2]      [,3] [,4] [,5] [,6] [,7]
+    ## [1,] 14.54658 0.7171215 0.7547904    0    0    0    0
+    ## [2,] 13.49745 0.6795621 0.7153044    0    0    0    0
+    ## [3,] 14.11300 0.7136056 0.7510535    0    0    0    0
+    ## [4,] 14.82354 0.7520265 0.7913274    0    0    0    0
+    ## [5,] 13.38658 0.7135274 0.7509551    0    0    0    0
+
+``` r
  cat("Expected total biomass:", mean(ALL.results[,1]),"\n")
+```
+
+    ## Expected total biomass: 14.07343
+
+``` r
  cat("Expected total catch:", mean(ALL.results[,2]),"\n")
+```
+
+    ## Expected total catch: 0.7151686
+
+``` r
  cat("Median revenue:", median(ALL.results[,3]),"\n")
+```
+
+    ## Median revenue: 0.7510535
+
+``` r
  cat("Median revenue:", quantile(ALL.results[,3],prob=0.05),"\n")
+```
+
+    ## Median revenue: 0.7224346
+
+``` r
  cat("Expected probability overfished:", mean(ALL.results[,4]),"\n")
+```
+
+    ## Expected probability overfished: 0
+
+``` r
  for (Isp in 1:Nsp)
   cat("Probability overfished:", as.character(BMSY[Isp,1]),mean(ALL.results[,4+Isp])/10,"\n")
 ```
+
+    ## Probability overfished: GB Cod 0 
+    ## Probability overfished: GB Haddock 0 
+    ## Probability overfished: Herring 0
 
 # Design HCRs
 

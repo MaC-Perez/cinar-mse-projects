@@ -59,9 +59,9 @@ get.Indicators <- function(Biomass=NULL,Catch=NULL,size=NULL,trophic.level=NULL,
   # Trophci level of survey
   TL.survey <- rep(NA,nrow(Biomass)) 
   # Proportion of total biomass that is comprised by predatory species
-  prop.predators <- rowSums(Biomass[,is.predator],na.rm=TRUE)/tot.bio
+  prop.predators <- rowSums(Biomass[,is.predator, drop=FALSE],na.rm=TRUE)/tot.bio
   # Pelagic demersal ratio
-  pd.ratio <- rowSums(Biomass[,is.pelagic],na.rm=TRUE)/rowSums(Biomass[,-(is.pelagic)],na.rm=TRUE)
+  pd.ratio <- rowSums(Biomass[,is.pelagic, drop=FALSE],na.rm=TRUE)/rowSums(Biomass[,-(is.pelagic), drop=FALSE],na.rm=TRUE)
   # Proportion of total biomass that is made of pelagic species
   prop.pel <- 1-(1/(pd.ratio+1))
   # Proportion of species that is overfished (less than half BMSY)
