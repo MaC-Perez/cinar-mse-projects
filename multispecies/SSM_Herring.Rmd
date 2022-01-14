@@ -173,8 +173,11 @@ print(exp(pars.mle))
 ```
 
 ```{r}
-BMSY <- pars.mle[1]/2
-Fmsy <- pars.mle[2]/2
+BMSY <- exp(pars.mle[1])/2
+Fmsy <- exp(pars.mle[2])/2
+
+BMSY
+Fmsy
 ```
 
 To obtain a set of plausible alternatives for the parameters of the operating model, we will use the statistical uncertainty from the estimation by sampling parameter sets from the estimated variance-covariance matrix.  
@@ -446,4 +449,126 @@ projection.plot(project.fixed)
 
 ```{r}
 saveRDS(project.fixed, file = here("multispecies/data/SS_Herring.rds"))
+```
+
+## Add more complex HCR
+Run HCR scenario 2 
+```{r}
+control.pars.psps <- list()
+
+# control.pars.psps$Species <- SS.Fmsy$Species["Haddock"]
+# control.pars.psps$H1 <- 0.75*SS.Fmsy$Fmsy #this matches the max F in the other scenario
+# control.pars.psps$H2 <- 0.5*SS.Fmsy$Fmsy 
+# control.pars.psps$H3 <- 0.1*SS.Fmsy$Fmsy 
+# 
+# control.pars.psps$B1 <- 2.0*SS.BMSY$BMSY
+# control.pars.psps$B2 <- 1.0*SS.BMSY$BMSY
+# control.pars.psps$B3 <- 0.5*SS.BMSY$BMSY
+# control.pars.psps$B4 <- 0.25*SS.BMSY$BMSY
+
+#control.pars.psps$Species <- SS.Fmsy$Species["Haddock"]
+control.pars.psps$H1 <- 0.75*Fmsy #this matches the max F in the other scenario
+control.pars.psps$H2 <- 0.5*Fmsy 
+control.pars.psps$H3 <- 0.1*Fmsy 
+
+control.pars.psps$B1 <- 2.0*BMSY
+control.pars.psps$B2 <- 1.0*BMSY
+control.pars.psps$B3 <- 0.5*BMSY
+control.pars.psps$B4 <- 0.25*BMSY
+
+
+#Plateau-slope-plateau-slop HCR  
+  control <- function(estimated.biomass, control.pars.psps){ #, Species) {
+    
+    H1 <- control.pars.psps$H1#[control.pars.psps$Species==Species]
+    H2 <- control.pars.psps$H2#[control.pars.psps$Species==Species]
+    H3 <- control.pars.psps$H3#[control.pars.psps$Species==Species]
+   
+    B4 <- control.pars.psps$B4#[control.pars.psps$Species==Species]
+    B3 <- control.pars.psps$B3#[control.pars.psps$Species==Species]
+    B2 <- control.pars.psps$B2#[control.pars.psps$Species==Species]
+    B1 <- control.pars.psps$B1#[control.pars.psps$Species==Species]
+    
+    harv <- ifelse(estimated.biomass >= B1, H1,
+                   ifelse(estimated.biomass < B1 & estimated.biomass >= B2,
+                          (H1-H2)/(B1-B2)*(estimated.biomass - B2) + H2,
+                          ifelse(estimated.biomass < B2 & estimated.biomass >= B3, H2,
+                                 ifelse(estimated.biomass < B3 & estimated.biomass > B4,
+                                        (H2-H3)/(B2-B3)*(estimated.biomass - B3) + H3,
+                                        ifelse(estimated.biomass <= B4, H3
+                                 )))))
+    return(harv)
+  }
+```
+
+```{r, include=FALSE}
+evaluate.psps <- function(pars.iter, biomass.iter,
+                     control.pars.psps, data.years, proj.years,
+                     iterations, ...) {
+  # function arguments:
+  # pars.iter & biomass.iter, the parameters & historical biomass trajectories of the operating model
+  # control.pars, the specifications of the harvest control rule
+  
+  # set up some indexing values
+  iyr <- length(data.years)+1
+  pyr <- length(proj.years)
+  yrs <- c(data.years, proj.years, max(proj.years)+1)
+  
+  # set up a data frame to store the results
+  res <- data.frame()
+  
+  # loop over the iterations of the MSE, each iteration conducts a 20 year projection with annual generation of biomass    
+  # observations and appliations of the control rule.
+  for(i in 1:iterations) {
+    
+    #extract the parameters for this iteration
+    K.i <- exp(pars.iter[i,1])
+    r.i <- exp(pars.iter[i,2])
+    sig.i <- exp(pars.iter[i,3])
+    
+    #set up vectors for time series of interest.
+    biomass.i <- c(subset(biomass.iter, iter==i)$biomass, numeric(pyr))
+    index.i <- c(index,numeric(pyr))
+    catch.i <- c(harvest, numeric(pyr))
+    TAC.i <- numeric(pyr)
+    
+    # loop over the projection period.
+    for (y in iyr:(iyr+pyr-1)) {
+      #generate the data for the most recent year
+      index.i[y] <- observe(biomass.i[y] , sig.i)
+      #calculate the TAC based on the harvest control rule
+      # note that the control rule ONLY sees the index data, not the operating model biomass.
+      TAC.i [y]  <- control(index.i[y], control.pars.psps) * index.i[y]
+      #find the realized catch after implementation error
+      catch.i[y] <- implement(TAC.i[y], ...)
+      
+      # update the true biomass of the operating model based on the output of the HCR
+      biomass.i[y+1] <- schaefer(biomass.i[y],catch.i[y],K.i,r.i)
+      
+      #end projection year loop for iteration i  
+    }
+    
+    #store the results for this iteration
+    res <- rbind(res, data.frame(year = yrs[-length(yrs)],
+                                 value = index.i, type = "index", iter = i),
+                 data.frame(year = yrs[-length(yrs)],
+                            value = catch.i, type = "catch", iter=i),
+                 data.frame(year = yrs, value = biomass.i,
+                            type= "biomass", iter=i)) 
+    #end loop over iterations
+  }
+  return(res)
+  #end function evaluate()
+}
+```
+
+Project with PSPS HCR of estimated biomass for all iterations & 20 yrs  
+```{r}
+herring_psps <- evaluate.psps(pars.iter, biomass.iter, control.pars.psps, data.years, proj.years, niter)
+tail(herring_psps)
+```
+
+
+```{r}
+projection.plot(herring_psps)
 ```

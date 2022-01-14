@@ -173,8 +173,11 @@ print(exp(pars.mle))
 ```
 
 ```{r}
-BMSY <- pars.mle[1]/2
-Fmsy <- pars.mle[2]/2
+BMSY <- exp(pars.mle[1])/2
+Fmsy <- exp(pars.mle[2])/2
+
+BMSY
+Fmsy
 ```
 
 To obtain a set of plausible alternatives for the parameters of the operating model, we will use the statistical uncertainty from the estimation by sampling parameter sets from the estimated variance-covariance matrix.  
@@ -449,7 +452,7 @@ saveRDS(project.fixed, file = here("multispecies/data/SS_Haddock.rds"))
 ```
 
 
-Run HCR scenario 2 *not run*
+Run HCR scenario 2 
 ```{r}
 control.pars.psps <- list()
 

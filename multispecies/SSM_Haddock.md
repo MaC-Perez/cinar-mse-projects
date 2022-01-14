@@ -246,9 +246,19 @@ print(exp(pars.mle))
     ## [1] 6.4251296 2.1844529 0.1012014
 
 ``` r
-BMSY <- pars.mle[1]/2
-Fmsy <- pars.mle[2]/2
+BMSY <- exp(pars.mle[1])/2
+Fmsy <- exp(pars.mle[2])/2
+
+BMSY
 ```
+
+    ## [1] 3.212565
+
+``` r
+Fmsy
+```
+
+    ## [1] 1.092226
 
 To obtain a set of plausible alternatives for the parameters of the
 operating model, we will use the statistical uncertainty from the
@@ -463,12 +473,12 @@ tail(project.fixed)
 ```
 
     ##       year    value    type iter
-    ## 36795 2038 5.772589 biomass  200
-    ## 36796 2039 5.640607 biomass  200
-    ## 36797 2040 5.655629 biomass  200
-    ## 36798 2041 5.653885 biomass  200
-    ## 36799 2042 5.246966 biomass  200
-    ## 36800 2043 5.871179 biomass  200
+    ## 36795 2038 4.402206 biomass  200
+    ## 36796 2039 4.189466 biomass  200
+    ## 36797 2040 4.067410 biomass  200
+    ## 36798 2041 4.137941 biomass  200
+    ## 36799 2042 3.276471 biomass  200
+    ## 36800 2043 4.041202 biomass  200
 
 We can view the trajectories of catch and operating model biomass from
 the output.  
@@ -512,7 +522,7 @@ projection.plot(project.fixed)
 saveRDS(project.fixed, file = here("multispecies/data/SS_Haddock.rds"))
 ```
 
-Run HCR scenario 2 *not run*
+Run HCR scenario 2
 
 ``` r
 control.pars.psps <- list()
@@ -570,12 +580,12 @@ tail(hadd_psps)
 ```
 
     ##       year    value    type iter
-    ## 36795 2038 5.668175 biomass  200
-    ## 36796 2039 5.464420 biomass  200
-    ## 36797 2040 5.717777 biomass  200
-    ## 36798 2041 5.403479 biomass  200
-    ## 36799 2042 5.830539 biomass  200
-    ## 36800 2043 5.030215 biomass  200
+    ## 36795 2038 4.256813 biomass  200
+    ## 36796 2039 4.399576 biomass  200
+    ## 36797 2040 4.502906 biomass  200
+    ## 36798 2041 4.131954 biomass  200
+    ## 36799 2042 4.869489 biomass  200
+    ## 36800 2043 2.773106 biomass  200
 
 ``` r
 projection.plot(hadd_psps)

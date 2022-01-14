@@ -246,9 +246,19 @@ print(exp(pars.mle))
     ## [1] 7.73114295 1.28022913 0.09327793
 
 ``` r
-BMSY <- pars.mle[1]/2
-Fmsy <- pars.mle[2]/2
+BMSY <- exp(pars.mle[1])/2
+Fmsy <- exp(pars.mle[2])/2
+
+BMSY
 ```
+
+    ## [1] 3.865571
+
+``` r
+Fmsy
+```
+
+    ## [1] 0.6401146
 
 To obtain a set of plausible alternatives for the parameters of the
 operating model, we will use the statistical uncertainty from the
@@ -463,12 +473,12 @@ tail(project.fixed)
 ```
 
     ##       year    value    type iter
-    ## 36795 2038 7.361602 biomass  200
-    ## 36796 2039 7.341150 biomass  200
-    ## 36797 2040 7.304209 biomass  200
-    ## 36798 2041 7.313690 biomass  200
-    ## 36799 2042 7.159497 biomass  200
-    ## 36800 2043 7.293719 biomass  200
+    ## 36795 2038 4.884853 biomass  200
+    ## 36796 2039 4.999084 biomass  200
+    ## 36797 2040 4.886744 biomass  200
+    ## 36798 2041 4.877247 biomass  200
+    ## 36799 2042 4.346464 biomass  200
+    ## 36800 2043 4.589632 biomass  200
 
 We can view the trajectories of catch and operating model biomass from
 the output.  
@@ -511,3 +521,76 @@ projection.plot(project.fixed)
 ``` r
 saveRDS(project.fixed, file = here("multispecies/data/SS_Herring.rds"))
 ```
+
+## Add more complex HCR
+
+Run HCR scenario 2
+
+``` r
+control.pars.psps <- list()
+
+# control.pars.psps$Species <- SS.Fmsy$Species["Haddock"]
+# control.pars.psps$H1 <- 0.75*SS.Fmsy$Fmsy #this matches the max F in the other scenario
+# control.pars.psps$H2 <- 0.5*SS.Fmsy$Fmsy 
+# control.pars.psps$H3 <- 0.1*SS.Fmsy$Fmsy 
+# 
+# control.pars.psps$B1 <- 2.0*SS.BMSY$BMSY
+# control.pars.psps$B2 <- 1.0*SS.BMSY$BMSY
+# control.pars.psps$B3 <- 0.5*SS.BMSY$BMSY
+# control.pars.psps$B4 <- 0.25*SS.BMSY$BMSY
+
+#control.pars.psps$Species <- SS.Fmsy$Species["Haddock"]
+control.pars.psps$H1 <- 0.75*Fmsy #this matches the max F in the other scenario
+control.pars.psps$H2 <- 0.5*Fmsy 
+control.pars.psps$H3 <- 0.1*Fmsy 
+
+control.pars.psps$B1 <- 2.0*BMSY
+control.pars.psps$B2 <- 1.0*BMSY
+control.pars.psps$B3 <- 0.5*BMSY
+control.pars.psps$B4 <- 0.25*BMSY
+
+
+#Plateau-slope-plateau-slop HCR  
+  control <- function(estimated.biomass, control.pars.psps){ #, Species) {
+    
+    H1 <- control.pars.psps$H1#[control.pars.psps$Species==Species]
+    H2 <- control.pars.psps$H2#[control.pars.psps$Species==Species]
+    H3 <- control.pars.psps$H3#[control.pars.psps$Species==Species]
+   
+    B4 <- control.pars.psps$B4#[control.pars.psps$Species==Species]
+    B3 <- control.pars.psps$B3#[control.pars.psps$Species==Species]
+    B2 <- control.pars.psps$B2#[control.pars.psps$Species==Species]
+    B1 <- control.pars.psps$B1#[control.pars.psps$Species==Species]
+    
+    harv <- ifelse(estimated.biomass >= B1, H1,
+                   ifelse(estimated.biomass < B1 & estimated.biomass >= B2,
+                          (H1-H2)/(B1-B2)*(estimated.biomass - B2) + H2,
+                          ifelse(estimated.biomass < B2 & estimated.biomass >= B3, H2,
+                                 ifelse(estimated.biomass < B3 & estimated.biomass > B4,
+                                        (H2-H3)/(B2-B3)*(estimated.biomass - B3) + H3,
+                                        ifelse(estimated.biomass <= B4, H3
+                                 )))))
+    return(harv)
+  }
+```
+
+Project with PSPS HCR of estimated biomass for all iterations & 20 yrs
+
+``` r
+herring_psps <- evaluate.psps(pars.iter, biomass.iter, control.pars.psps, data.years, proj.years, niter)
+tail(herring_psps)
+```
+
+    ##       year    value    type iter
+    ## 36795 2038 5.463082 biomass  200
+    ## 36796 2039 5.156238 biomass  200
+    ## 36797 2040 5.328473 biomass  200
+    ## 36798 2041 5.148800 biomass  200
+    ## 36799 2042 5.446293 biomass  200
+    ## 36800 2043 4.618085 biomass  200
+
+``` r
+projection.plot(herring_psps)
+```
+
+![](SSM_Herring_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->

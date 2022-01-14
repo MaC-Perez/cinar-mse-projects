@@ -1,6 +1,6 @@
-CINAR MSE Workshop: First MSE
+Cod MSE basaed on First MSE
 ================
-Team Multispecies
+Sam Schiano
 January 2022
 
 ### Introduction to MSE cod example
@@ -100,11 +100,11 @@ use to perform the MSE simulations.
 \#\#\#\#\#Specify input data and associated years
 
 ``` r
-data.years <- 1991:2013
-harvest <- c(0.1,3,15,52,76,139,95,93,84,93,86,103,104,
-             92,46,67,59,30,54,59,47,33,44)
-index <- c(NA,NA,NA,NA,NA,NA,NA,NA,935,NA,1057,NA,678,NA,
-           420,NA,554,NA,458,NA,474,NA,280)
+# data.years <- 1991:2013
+# harvest <- c(0.1,3,15,52,76,139,95,93,84,93,86,103,104,
+#              92,46,67,59,30,54,59,47,33,44)
+# index <- c(NA,NA,NA,NA,NA,NA,NA,NA,935,NA,1057,NA,678,NA,
+#            420,NA,554,NA,458,NA,474,NA,280)
 
 load(here("multispecies/data/GBdata.rda"))
 cod <- subset(GB.data, Species=="Cod")
@@ -230,7 +230,9 @@ them and perform the assessment.
 First define initial parameter vector for: log(K), log(r), log(sigma)
 
 ``` r
-ini.parms <- c(-0.6,-0.3 ,-2.1 )
+#ini.parms <- c(-0.6,-0.3 ,-2.1 )
+maxsvB.GBcod <- max(index)
+ini.parms <- c(log(maxsvB.GBcod), log(0.2), log(0.3))
 ```
 
 Fit the logistic model to data:
@@ -241,27 +243,27 @@ cod
 ```
 
     ## $pars
-    ## [1] -0.6701726 -0.2307355 -2.3779600
+    ## [1] -0.6701935 -0.2304331 -2.3782841
     ## 
     ## $biomass
-    ##  [1] 0.5116203 0.5098124 0.5093995 0.5092907 0.5092558 0.5092426 0.5092375
-    ##  [8] 0.5092361 0.5092364 0.5092375 0.5092390 0.5092404 0.5092418 0.5092430
-    ## [15] 0.5092440 0.5092449 0.4719221 0.4636574 0.4618812 0.4618045 0.4620468
-    ## [22] 0.4307140 0.4210535 0.4181658 0.4175633 0.4175950 0.3656999 0.3456827
-    ## [29] 0.3369991 0.3331050 0.3312088 0.3982323 0.4385931 0.4558851 0.4612620
-    ## [36] 0.4623563 0.4816016 0.4874682 0.4889450 0.4892726 0.4893553
+    ##  [1] 0.5116096 0.5098017 0.5093893 0.5092806 0.5092458 0.5092326 0.5092276
+    ##  [8] 0.5092261 0.5092265 0.5092276 0.5092290 0.5092305 0.5092318 0.5092330
+    ## [15] 0.5092341 0.5092349 0.4719121 0.4636557 0.4618841 0.4618094 0.4620525
+    ## [22] 0.4307199 0.4210665 0.4181843 0.4175851 0.4176187 0.3657245 0.3457196
+    ## [29] 0.3370487 0.3331660 0.3312795 0.3983110 0.4386530 0.4559198 0.4612804
+    ## [36] 0.4623669 0.4816092 0.4874697 0.4889433 0.4892696 0.4893518
     ## 
     ## $convergence
     ## [1] 0
     ## 
     ## $nll
-    ## [1] -39.32311
+    ## [1] -39.3231
     ## 
     ## $vcov
     ##               [,1]          [,2]          [,3]
-    ## [1,]  3.213330e-04 -1.011486e-03 -1.771908e-07
-    ## [2,] -1.011486e-03  5.757233e-03 -3.410619e-07
-    ## [3,] -1.771908e-07 -3.410619e-07  1.219703e-02
+    ## [1,]  3.212088e-04 -1.011865e-03 -6.862185e-07
+    ## [2,] -1.011865e-03  5.764018e-03  7.038378e-06
+    ## [3,] -6.862185e-07  7.038378e-06  1.218913e-02
 
 Extract the maximum likelihood and parameter estimates
 
@@ -270,26 +272,36 @@ biomass.mle <- cod$biomass
 print(biomass.mle)
 ```
 
-    ##  [1] 0.5116203 0.5098124 0.5093995 0.5092907 0.5092558 0.5092426 0.5092375
-    ##  [8] 0.5092361 0.5092364 0.5092375 0.5092390 0.5092404 0.5092418 0.5092430
-    ## [15] 0.5092440 0.5092449 0.4719221 0.4636574 0.4618812 0.4618045 0.4620468
-    ## [22] 0.4307140 0.4210535 0.4181658 0.4175633 0.4175950 0.3656999 0.3456827
-    ## [29] 0.3369991 0.3331050 0.3312088 0.3982323 0.4385931 0.4558851 0.4612620
-    ## [36] 0.4623563 0.4816016 0.4874682 0.4889450 0.4892726 0.4893553
+    ##  [1] 0.5116096 0.5098017 0.5093893 0.5092806 0.5092458 0.5092326 0.5092276
+    ##  [8] 0.5092261 0.5092265 0.5092276 0.5092290 0.5092305 0.5092318 0.5092330
+    ## [15] 0.5092341 0.5092349 0.4719121 0.4636557 0.4618841 0.4618094 0.4620525
+    ## [22] 0.4307199 0.4210665 0.4181843 0.4175851 0.4176187 0.3657245 0.3457196
+    ## [29] 0.3370487 0.3331660 0.3312795 0.3983110 0.4386530 0.4559198 0.4612804
+    ## [36] 0.4623669 0.4816092 0.4874697 0.4889433 0.4892696 0.4893518
 
 ``` r
 pars.mle <- cod$pars
 print(exp(pars.mle))
 ```
 
-    ## [1] 0.51162027 0.79394946 0.09273958
+    ## [1] 0.51160960 0.79418960 0.09270952
 
 Estimate the reference points
 
 ``` r
-BMSY <- pars.mle[1]/2
-Fmsy <- pars.mle[2]/2
+BMSY <- exp(pars.mle[1])/2
+Fmsy <- exp(pars.mle[2])/2
+
+BMSY
 ```
+
+    ## [1] 0.2558048
+
+``` r
+Fmsy
+```
+
+    ## [1] 0.3970948
 
 To obtain a set of plausible alternatives for the parameters of the
 operating model, we will use the statistical uncertainty from the
@@ -323,12 +335,12 @@ head(biomass.iter)
 ```
 
     ##   year   biomass iter
-    ## 1 1983 0.5086837    1
-    ## 2 1984 0.5068759    1
-    ## 3 1985 0.5064191    1
-    ## 4 1986 0.5062899    1
-    ## 5 1987 0.5062476    1
-    ## 6 1988 0.5062318    1
+    ## 1 1983 0.5126944    1
+    ## 2 1984 0.5108865    1
+    ## 3 1985 0.5104057    1
+    ## 4 1986 0.5102644    1
+    ## 5 1987 0.5102173    1
+    ## 6 1988 0.5101998    1
 
 We can now plot the estimated biomass time series
 
@@ -503,12 +515,12 @@ tail(project.fixed)
 ```
 
     ##       year     value    type iter
-    ## 36795 2038 0.5816132 biomass  200
-    ## 36796 2039 0.5882848 biomass  200
-    ## 36797 2040 0.5766320 biomass  200
-    ## 36798 2041 0.5912555 biomass  200
-    ## 36799 2042 0.5769966 biomass  200
-    ## 36800 2043 0.5757080 biomass  200
+    ## 36795 2038 0.3046762 biomass  200
+    ## 36796 2039 0.3193764 biomass  200
+    ## 36797 2040 0.3106477 biomass  200
+    ## 36798 2041 0.3179379 biomass  200
+    ## 36799 2042 0.3211513 biomass  200
+    ## 36800 2043 0.3245817 biomass  200
 
 We can view the trajectories of catch and operating model biomass from
 the output.  
@@ -551,6 +563,79 @@ projection.plot(project.fixed)
 ``` r
 saveRDS(project.fixed, file = here("multispecies/data/SS_Cod.rds"))
 ```
+
+## Add more complex HCR
+
+Run HCR scenario 2
+
+``` r
+control.pars.psps <- list()
+
+# control.pars.psps$Species <- SS.Fmsy$Species["Haddock"]
+# control.pars.psps$H1 <- 0.75*SS.Fmsy$Fmsy #this matches the max F in the other scenario
+# control.pars.psps$H2 <- 0.5*SS.Fmsy$Fmsy 
+# control.pars.psps$H3 <- 0.1*SS.Fmsy$Fmsy 
+# 
+# control.pars.psps$B1 <- 2.0*SS.BMSY$BMSY
+# control.pars.psps$B2 <- 1.0*SS.BMSY$BMSY
+# control.pars.psps$B3 <- 0.5*SS.BMSY$BMSY
+# control.pars.psps$B4 <- 0.25*SS.BMSY$BMSY
+
+#control.pars.psps$Species <- SS.Fmsy$Species["Haddock"]
+control.pars.psps$H1 <- 0.75*Fmsy #this matches the max F in the other scenario
+control.pars.psps$H2 <- 0.5*Fmsy 
+control.pars.psps$H3 <- 0.1*Fmsy 
+
+control.pars.psps$B1 <- 2.0*BMSY
+control.pars.psps$B2 <- 1.0*BMSY
+control.pars.psps$B3 <- 0.5*BMSY
+control.pars.psps$B4 <- 0.25*BMSY
+
+
+#Plateau-slope-plateau-slop HCR  
+  control <- function(estimated.biomass, control.pars.psps){ #, Species) {
+    
+    H1 <- control.pars.psps$H1#[control.pars.psps$Species==Species]
+    H2 <- control.pars.psps$H2#[control.pars.psps$Species==Species]
+    H3 <- control.pars.psps$H3#[control.pars.psps$Species==Species]
+   
+    B4 <- control.pars.psps$B4#[control.pars.psps$Species==Species]
+    B3 <- control.pars.psps$B3#[control.pars.psps$Species==Species]
+    B2 <- control.pars.psps$B2#[control.pars.psps$Species==Species]
+    B1 <- control.pars.psps$B1#[control.pars.psps$Species==Species]
+    
+    harv <- ifelse(estimated.biomass >= B1, H1,
+                   ifelse(estimated.biomass < B1 & estimated.biomass >= B2,
+                          (H1-H2)/(B1-B2)*(estimated.biomass - B2) + H2,
+                          ifelse(estimated.biomass < B2 & estimated.biomass >= B3, H2,
+                                 ifelse(estimated.biomass < B3 & estimated.biomass > B4,
+                                        (H2-H3)/(B2-B3)*(estimated.biomass - B3) + H3,
+                                        ifelse(estimated.biomass <= B4, H3
+                                 )))))
+    return(harv)
+  }
+```
+
+Project with PSPS HCR of estimated biomass for all iterations & 20 yrs
+
+``` r
+cod_psps <- evaluate.psps(pars.iter, biomass.iter, control.pars.psps, data.years, proj.years, niter)
+tail(cod_psps)
+```
+
+    ##       year     value    type iter
+    ## 36795 2038 0.3683117 biomass  200
+    ## 36796 2039 0.3793440 biomass  200
+    ## 36797 2040 0.3814628 biomass  200
+    ## 36798 2041 0.3269792 biomass  200
+    ## 36799 2042 0.3411957 biomass  200
+    ## 36800 2043 0.3710605 biomass  200
+
+``` r
+projection.plot(cod_psps)
+```
+
+![](SS_cod_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
 
 ## UNCHANGED BELOW HERE aside from Rpath cod data
 
@@ -604,7 +689,7 @@ axis(2,at=c(control.pars$H2,control.pars$H1),labels=c("H2","H1"))
 box()
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
+![](SS_cod_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
 
 Conduct the evaluation by projecting system forward in time
 
@@ -619,7 +704,7 @@ Plot the trajectories:
 projection.plot(project.hcr)
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+![](SS_cod_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
 
 Now let’s add potential for overshooting the TAC
 
@@ -714,7 +799,7 @@ Fig5 <- ggplot(data=subset(MSE, type !="index" &
 Fig5 + geom_boxplot(aes(fill=implement), width = 1) + facet_wrap(~type, scale="free_y") + ylab("Million tonnes") + scale_fill_grey(start=0.5) + theme_bw()
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-36-1.png)<!-- --> We
+![](SS_cod_files/figure-gfm/unnamed-chunk-40-1.png)<!-- --> We
 immediately see a yield-biomass tradeoff - HCR2 gives more catch but
 leads to lower biomass. There is not much change when the catch is 20%
 higher than the TAC.
@@ -735,7 +820,7 @@ Fig6 <- ggplot(data=subset(aac2),
 Fig6 + geom_boxplot(aes(fill=implement), width = 1)  + ylab("Million tonnes") + scale_fill_grey(start=0.5) + theme_bw()
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
+![](SS_cod_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
 
 ``` r
 # years B > BLIM
@@ -757,7 +842,7 @@ Fig7 <- ggplot(data=subset(above.blim),
 Fig7 + geom_boxplot(aes(fill=implement), width = 1)  + ylab("Proportion of years above BLIM") + scale_fill_grey(start=0.5) + theme_bw()
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-37-2.png)<!-- -->
+![](SS_cod_files/figure-gfm/unnamed-chunk-41-2.png)<!-- -->
 
 ``` r
 # num years fishery is open
@@ -769,7 +854,7 @@ Fig8 <- ggplot(data=subset(not.closed),
 Fig8 + geom_boxplot(aes(fill=implement), width = 1)  + ylab("Proportion of years TAC > 0") + scale_fill_grey(start=0.5) + theme_bw()
 ```
 
-![](SS_cod_files/figure-gfm/unnamed-chunk-37-3.png)<!-- -->
+![](SS_cod_files/figure-gfm/unnamed-chunk-41-3.png)<!-- -->
 
 ### Next Steps
 
