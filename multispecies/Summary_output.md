@@ -1,25 +1,23 @@
----
-title: "Summary outputs"
-author: "Sean Lucey"
-date: "1/13/2022"
-output: github_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
-library(here)
-library(data.table)
-library(scales)
-library(fmsb)
-```
+Summary outputs
+================
+Sean Lucey
+1/13/2022
 
 ## Multispecies MSE
 
-We ran both single species and multispecies models to compare and contrast.  Single species assessments were conducted using a simple Schaefer surplus-production model as the operating model while the multispecies assessments were conducted using Rpath.  Single species models were run 200 times to address parameter uncertainty.  There is a process to do something similar in Rpath but there was not enough time during this workshop to implement it.  Therefore, interation #10 was chosen at random to represent the single species run and simplify output.
+We ran both single species and multispecies models to compare and
+contrast. Single species assessments were conducted using a simple
+Schaefer surplus-production model as the operating model while the
+multispecies assessments were conducted using Rpath. Single species
+models were run 200 times to address parameter uncertainty. There is a
+process to do something similar in Rpath but there was not enough time
+during this workshop to implement it. Therefore, interation \#10 was
+chosen at random to represent the single species run and simplify
+output.
 
 ### Load data
-```{r}
+
+``` r
 #Single species
 ss.cod <- as.data.table(readRDS(file = here('multispecies', 'data', 'SS_Cod.rds')))
 ss.cod <- ss.cod[iter == 15, ]
@@ -53,12 +51,15 @@ Fmsy <- readRDS(here('multispecies', 'data', 'Fmsy.rds'))
 
 ### Calculate summary statistics
 
-We'll average over the last 5 years of the simulation and see where things stack up compared to the reference points.  Also look at average yield and interannual variation in catch.
+We’ll average over the last 5 years of the simulation and see where
+things stack up compared to the reference points. Also look at average
+yield and interannual variation in catch.
 
-$$IAV = \frac{\sqrt{(1/n - 1)\sum_{y=1}^{n-1}(C_{y+1} - C_y)^2}}{1/n\sum_{y=1}^nC_y}$$
-where $n$ is the number of years ($y$) in the simulation and $C_y$ the recommended catch summed over all species for the given year
+\[IAV = \frac{\sqrt{(1/n - 1)\sum_{y=1}^{n-1}(C_{y+1} - C_y)^2}}{1/n\sum_{y=1}^nC_y}\]
+where \(n\) is the number of years (\(y\)) in the simulation and \(C_y\)
+the recommended catch summed over all species for the given year
 
-```{r}
+``` r
 # Interannual variation
 iav <- function(catch){
   catch <- data.table(catch = catch)
@@ -71,7 +72,7 @@ iav <- function(catch){
 
 Calculate the ratio of reference points to their references
 
-```{r}
+``` r
 #Mean biomass and catch for the last 5 years of projections
 mean.end <- all.data[Year %in% 2038:2042, mean(value), by = c('Species', 'type', 'HCR')]
 
@@ -99,7 +100,7 @@ ref.points[, c('Species', 'type', 'V1', 'BMSY', 'Fmsy') := NULL]
 
 Calculate interannual variance
 
-```{r}
+``` r
 all.catch <- all.data[type == 'catch', sum(value), by = c('Year', 'HCR')]
 iav.out <- all.catch[, iav(V1), by = 'HCR']
 iav.out[, metric := 'IAV']
@@ -108,7 +109,7 @@ setnames(iav.out, 'V1', 'value')
 
 Grab total yield from the system
 
-```{r}
+``` r
 yield <- mean.end[type == 'catch', sum(V1), by = 'HCR']
 yield[, metric := 'Total Yield']
 setnames(yield, 'V1', 'value')
@@ -118,7 +119,7 @@ setnames(yield, 'V1', 'value')
 
 Using code from Gavin to plot in a radar plot
 
-```{r}
+``` r
 do_radar_plot <- function(metrics) {
   # metrics is a dataframe of metrics, expecting columns
   # metrics <- tibble(metric = rep(letters[1:5],each=3),
@@ -196,14 +197,15 @@ legend("topleft",inset=-.01,title ="HCR",title.adj = 0.2,
 }
 ```
 
-```{r}
+``` r
 metrics <- rbindlist(list(ref.points, iav.out, yield))
 metrics[, mp := HCR]
 
 do_radar_plot(metrics)
 ```
 
+    ## `summarise()` ungrouping output (override with `.groups` argument)
 
+    ## Joining, by = "metric"
 
-
-
+![](Summary_output_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
