@@ -391,6 +391,8 @@ SS.Fmsy <- pars %>%
   mutate(Fmsy= exppar/2) %>% 
   select(Species, Fmsy)
 
+saveRDS(SS.BMSY, file = here('multispecies', 'data', 'BMSY.rds'))
+saveRDS(SS.Fmsy, file = here('multispecies', 'data', 'Fmsy.rds'))
 ```
 
 
