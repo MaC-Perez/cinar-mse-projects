@@ -17,24 +17,26 @@ model before contnuing with the simulation.
 Mass balance is governed by two master equations; one describing
 production:
 
-\[ P_i = Y_i + B_iM2_i + E_i + BA_i + P_i(1 - EE_i) \]
+*P*<sub>*i*</sub> = *Y*<sub>*i*</sub> + *B*<sub>*i*</sub>*M*2<sub>*i*</sub> + *E*<sub>*i*</sub> + *B**A*<sub>*i*</sub> + *P*<sub>*i*</sub>(1−*E**E*<sub>*i*</sub>)
 
-where production, \(P_i\), is the sum of a species’ fishery yield,
-\(Y_i\); predation mortality, \(M2_i\); emigration, \(E_i\); biomass
-accumulation, \(BA_i\); and other mortality, expressed as
-\(P_i(1-EE_i)\). Where \(EE_i\) is the ecotrophic efficiency or
-percentage of mortality explained within the model. In this equation,
-\(M2_i\) is expressed as a rate and therefore multiplied by the species
-biomass, \(B_i\).
+where production, *P*<sub>*i*</sub>, is the sum of a species’ fishery
+yield, *Y*<sub>*i*</sub>; predation mortality, *M*2<sub>*i*</sub>;
+emigration, *E*<sub>*i*</sub>; biomass accumulation,
+*B**A*<sub>*i*</sub>; and other mortality, expressed as
+*P*<sub>*i*</sub>(1−*E**E*<sub>*i*</sub>). Where *E**E*<sub>*i*</sub> is
+the ecotrophic efficiency or percentage of mortality explained within
+the model. In this equation, *M*2<sub>*i*</sub> is expressed as a rate
+and therefore multiplied by the species biomass, *B*<sub>*i*</sub>.
 
 and the other consumption:
 
-\[Q_i = P_i + R_i + U_i\]
+*Q*<sub>*i*</sub> = *P*<sub>*i*</sub> + *R*<sub>*i*</sub> + *U*<sub>*i*</sub>
 
-where \(Q_i\) is the total consumption, \(R_i\) is respiration, and
-\(U_i\) is unassimilated food. Energy used for respiration is lost from
-the system. Unassimilated food is the portion of consumption that is
-excreted and remains in the system through a detrital group.
+where *Q*<sub>*i*</sub> is the total consumption, *R*<sub>*i*</sub> is
+respiration, and *U*<sub>*i*</sub> is unassimilated food. Energy used
+for respiration is lost from the system. Unassimilated food is the
+portion of consumption that is excreted and remains in the system
+through a detrital group.
 
 ``` r
 #Load GB parameters
@@ -477,6 +479,9 @@ SS.Fmsy <- pars %>%
   filter(Par == 'logr') %>%
   mutate(Fmsy= exppar/2) %>% 
   select(Species, Fmsy)
+
+saveRDS(SS.BMSY, file = here('multispecies', 'data', 'BMSY.rds'))
+saveRDS(SS.Fmsy, file = here('multispecies', 'data', 'Fmsy.rds'))
 ```
 
 # Set-up Rsim simulation and the closed loop
@@ -540,11 +545,26 @@ control.pars$B4 <- 0.25*SS.BMSY$BMSY
   }
 ```
 
+HCR Shape of PSPS
+
+``` r
+control.pars$Bmax <- 2.5*SS.BMSY$BMSY 
+plot(c(0,control.pars$B4[1],control.pars$B3[1],control.pars$B2[1],control.pars$B1[1],control.pars$Bmax[1]),
+     c(control.pars$H3[1],control.pars$H3[1],control.pars$H2[1],control.pars$H2[1],control.pars$H1[1],control.pars$H1[1]),
+     type='l',axes=F,xlab="estimated biomass",ylab="exploitation rate",
+     ylim=c(0,3.0*control.pars$H1[1]))
+axis(1,at=c(control.pars$B4[1],control.pars$B3[1],control.pars$B2[1],control.pars$B1[1]),labels=c("B4","B3","B2","B1"))
+axis(2,at=c(control.pars$H3[1],control.pars$H2[1],control.pars$H1[1]),labels=c("H3","H2","H1"))
+box()
+```
+
+![](RpathOM_HCR_PSPS_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
 We assume perfect implementation of the strategy - in that the realized
 catch is the same as the TAC. Will also have to convert the catch target
 to effort as that is what drives the Rsim dynamics. Rpath standardizes
-Effort to 1 so \(Catch = qEB\) simplifies to \(C = qB\) so \(q = C/B\)
-or the initial \(F\).
+Effort to 1 so *C**a**t**c**h* = *q**E**B* simplifies to *C* = *q**B* so
+*q* = *C*/*B* or the initial *F*.
 
 ``` r
 #Cheating a little bit here
@@ -678,7 +698,7 @@ ggplot(GB.bio[Group %in% c('Cod', 'Haddock', 'AtlHerring')],
   geom_line()
 ```
 
-![](RpathOM_HCR_PSPS_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](RpathOM_HCR_PSPS_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
 Collect the results for further analysis
 
@@ -786,7 +806,7 @@ ggplot(GB.bio[Group %in% c('Cod', 'Haddock', 'AtlHerring')],
   geom_line()
 ```
 
-![](RpathOM_HCR_PSPS_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+![](RpathOM_HCR_PSPS_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
 
 Collect the results for further analysis
 
