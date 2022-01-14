@@ -149,12 +149,12 @@ do_radar_plot <- function(metrics) {
     ungroup()
   
   bounds <- tibble(mp = c("max","min"),
-                   'B/Bmsy-Cod' = c(1,0),
-                   'B/Bmsy-Haddock' = c(1,0),
                    'B/Bmsy-AtlHerring' = c(1,0),
-                   'F/Fmsy-Cod' = c(1,0),
-                   'F/Fmsy-Haddock' = c(1,0),
                    'F/Fmsy-AtlHerring' = c(1,0),
+                   'B/Bmsy-Cod' = c(1,0),
+                   'F/Fmsy-Cod' = c(1,0),
+                   'B/Bmsy-Haddock' = c(1,0),
+                   'F/Fmsy-Haddock' = c(1,0),
                    'IAV' = c(1,0),
                    'Total Yield' = c(1,0))
   
