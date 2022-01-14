@@ -552,7 +552,7 @@ control.pars$Bmax <- 2.5*SS.BMSY$BMSY
 plot(c(0,control.pars$B4[1],control.pars$B3[1],control.pars$B2[1],control.pars$B1[1],control.pars$Bmax[1]),
      c(control.pars$H3[1],control.pars$H3[1],control.pars$H2[1],control.pars$H2[1],control.pars$H1[1],control.pars$H1[1]),
      type='l',axes=F,xlab="estimated biomass",ylab="exploitation rate",
-     ylim=c(0,3.0*control.pars$H1[1]))
+     ylim=c(0,1.1*control.pars$H1[1]))
 axis(1,at=c(control.pars$B4[1],control.pars$B3[1],control.pars$B2[1],control.pars$B1[1]),labels=c("B4","B3","B2","B1"))
 axis(2,at=c(control.pars$H3[1],control.pars$H2[1],control.pars$H1[1]),labels=c("H3","H2","H1"))
 box()
