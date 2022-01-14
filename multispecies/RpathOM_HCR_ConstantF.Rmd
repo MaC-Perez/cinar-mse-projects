@@ -556,12 +556,138 @@ ggplot(GB.bio[Group %in% c('Cod', 'Haddock', 'AtlHerring')],
   geom_line()
 ```
 
-Summarize the results
+Collect the results for further analysis
 ```{r}
+#Get in a similar format to SS models run in other rmds
+sp.cols <- which(colnames(GB.full$annual_Biomass) %in% c('Cod', 'Haddock', 'AtlHerring'))
+
+#Biomass
+biomass <- as.data.table(GB.full$annual_Biomass[, sp.cols])
+biomass[, Year := 1983:2042]
+biomass <- data.table::melt(biomass, id.vars = 'Year', variable.name = 'Species')
+biomass[, type := 'biomass']
+
+#Catch
+catch <- as.data.table(GB.full$annual_Catch[, sp.cols])
+catch[, Year := 1983:2042]
+catch <- data.table::melt(catch, id.vars = 'Year', variable.name = 'Species')
+catch[, type := 'catch']
+
+output <- rbindlist(list(biomass, catch))
+output[, HCR := 'ConstantF_min']
 
 ```
 
+# Rerun simulation but with max effort taken rather than min
 
+```{r}
+set.seed(123)
+
+GB.full <- copy(GB.run)
+
+#Divide TAC proportionally between the three gears
+props <- qtable[, .SD / rowSums(.SD), .SDcols = c('Gillnet', 'OtterTrawlLg',
+                                                  'Midwater')]
+props[, Group := qtable[, Group]]
+
+for(iyear in 2023:2042){
+  GB.full <- rsim.step(GB.scene, GB.full, method = 'AB', iyear)
+    
+  #New observations
+  new.cod <- GenData(GB.full, 'Cod', iyear, Sigma = 0.1)
+  new.had <- GenData(GB.full, 'Haddock', iyear, Sigma = 0.1)
+  new.her <- GenData(GB.full, 'AtlHerring', iyear, Sigma = 0.1)
+  
+  #New TAC
+  index.cod <- new.cod$ObsBio
+  index.had <- new.had$ObsBio
+  index.her <- new.her$ObsBio
+  
+  #check for correct order of control.pars vector which goes Cod, AtlHerring, Haddock
+  TAC.cod <- control(index.cod, control.pars, "Cod") * index.cod
+  TAC.had <- control(index.had, control.pars, "Haddock") * index.had
+  TAC.her <- control(index.her, control.pars, "AtlHerring") * index.her
+  
+  #proportion TAC
+  TAC.cod.lgm <- TAC.cod * props[Group == 'Cod', OtterTrawlLg]
+  TAC.cod.gil <- TAC.cod * props[Group == 'Cod', Gillnet]
+  TAC.cod.mid <- TAC.cod * props[Group == 'Cod', Midwater]
+  
+  TAC.had.lgm <- TAC.had * props[Group == 'Haddock', OtterTrawlLg]
+  TAC.had.gil <- TAC.had * props[Group == 'Haddock', Gillnet]
+  TAC.had.mid <- TAC.had * props[Group == 'Haddock', Midwater]
+  
+  TAC.her.lgm <- TAC.her * props[Group == 'AtlHerring', OtterTrawlLg]
+  TAC.her.gil <- TAC.her * props[Group == 'AtlHerring', Gillnet]
+  TAC.her.mid <- TAC.her * props[Group == 'AtlHerring', Midwater]
+  
+  #Implement new TAC via effort
+  #Large mesh trawl and gillnet will be set by the lower effort between cod and haddock
+  effort.lgm <- max(c(implement(TAC.cod.lgm, qtable[Group == 'Cod', OtterTrawlLg],
+                                index.cod),
+                      implement(TAC.had.lgm, qtable[Group == 'Haddock', OtterTrawlLg],
+                                index.had)))
+  effort.gil <- max(c(implement(TAC.cod.gil, qtable[Group == 'Cod', Gillnet],
+                                index.cod),
+                      implement(TAC.had.gil, qtable[Group == 'Haddock', Gillnet],
+                                index.had))) 
+  #Midwater set by herring
+  effort.mid <- implement(TAC.her.mid, qtable[Group == 'AtlHerring', Midwater],
+                          index.her)
+  
+  #Set new Effort
+  GB.scene <- adjust.fishing(GB.scene, 'ForcedEffort', 'OtterTrawlLg', 
+                             sim.year = iyear + 1, value = effort.lgm)
+  GB.scene <- adjust.fishing(GB.scene, 'ForcedEffort', 'Gillnet', 
+                             sim.year = iyear + 1, value = effort.gil)
+  GB.scene <- adjust.fishing(GB.scene, 'ForcedEffort', 'Midwater', 
+                             sim.year = iyear + 1, value = effort.mid)
+  
+  } 
+
+```
+
+```{r}
+#Plot results
+GB.bio <- as.data.table(GB.full$out_Biomass)
+GB.bio[, Month := 1:nrow(GB.bio)]
+GB.bio <- data.table::melt(GB.bio, id.vars = 'Month', variable.name = 'Group', 
+                           value.name = 'Biomass')
+start <- data.table::as.data.table(GB.full$start_state$Biomass)
+start[, Group := names(GB.full$start_state$Biomass)]
+
+GB.bio <- merge(GB.bio, start, by = 'Group')
+GB.bio[, Rel.biomass := Biomass / V1]
+
+ggplot(GB.bio[Group %in% c('Cod', 'Haddock', 'AtlHerring')],
+       aes(x = Month, y = Rel.biomass, col = Group)) +
+  geom_line()
+```
+
+Collect the results for further analysis
+```{r}
+#Get in a similar format to SS models run in other rmds
+sp.cols <- which(colnames(GB.full$annual_Biomass) %in% c('Cod', 'Haddock', 'AtlHerring'))
+
+#Biomass
+biomass <- as.data.table(GB.full$annual_Biomass[, sp.cols])
+biomass[, Year := 1983:2042]
+biomass <- data.table::melt(biomass, id.vars = 'Year', variable.name = 'Species')
+biomass[, type := 'biomass']
+
+#Catch
+catch <- as.data.table(GB.full$annual_Catch[, sp.cols])
+catch[, Year := 1983:2042]
+catch <- data.table::melt(catch, id.vars = 'Year', variable.name = 'Species')
+catch[, type := 'catch']
+
+output2 <- rbindlist(list(biomass, catch))
+output2[, HCR := 'ConstantF_max']
+
+output <- rbindlist(list(output, output2))
+
+saveRDS(output, file = here('multispecies', 'data', 'MS_ConstantF.rds'))
+```
 
 
 
